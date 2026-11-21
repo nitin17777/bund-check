@@ -38,19 +38,20 @@ All error responses strictly follow the RFC 7807 problem details specification:
 
 ## 2. Endpoints Overview
 
-| Method | Path | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/v1/health` | Service health, model status, and provider connectivity | Optional |
-| `POST` | `/api/v1/document/extract` | Ingest and parse PDF/DOCX/TXT into normalized paragraphs | Optional |
-| `POST` | `/api/v1/check` | Execute probabilistic content detection and attribution | Optional |
-| `POST` | `/api/v1/check/report` | Export analysis report as PDF or structured JSON | Optional |
-| `POST` | `/api/v1/improve` | Rewrite text in specified mode with span protection | Optional |
-| `POST` | `/api/v1/verify` | Re-run standalone verification audit on source vs. rewrite | Optional |
-| `POST` | `/api/v1/export` | Export rewritten text to DOCX, PDF, or Markdown | Optional |
-| `GET` | `/api/v1/history` | List opt-in past analyses and revisions | Required |
-| `GET` | `/api/v1/settings` | Retrieve user preferences and configured LLM providers | Required |
-| `PUT` | `/api/v1/settings` | Update user preferences or encrypted LLM keys | Required |
-| `DELETE`| `/api/v1/delete` | Immediate hard deletion of user data or specific document | Required |
+| Method | Path | Description | Auth Required | Processing Mode |
+|---|---|---|---|---|
+| `GET` | `/api/v1/health` | Service health, model status, peak VRAM/RAM metrics | Optional | Sync |
+| `POST` | `/api/v1/document/extract` | Ingest PDF/DOCX/TXT; extract text & Markdown tables | Optional | Sync / Async |
+| `POST` | `/api/v1/check` | Probabilistic AI-pattern analysis & sentence attribution | Optional | Sync (<1k words) / Async (>=1k words) |
+| `GET` | `/api/v1/tasks/{task_id}` | Poll status & retrieve result of asynchronous task | Optional | Sync |
+| `POST` | `/api/v1/check/report` | Export analysis report as PDF or structured JSON | Optional | Sync |
+| `POST` | `/api/v1/improve` | Rewrite text in specified mode with span protection | Optional | Sync (<1k words) / Async (>=1k words) |
+| `POST` | `/api/v1/verify` | Re-run standalone verification audit (source vs rewrite) | Optional | Sync |
+| `POST` | `/api/v1/export` | Export rewritten text to DOCX, PDF, or Markdown | Optional | Sync |
+| `GET` | `/api/v1/history` | List opt-in past analyses and revisions | Required | Sync |
+| `GET` | `/api/v1/settings` | Retrieve user preferences and configured LLM providers | Required | Sync |
+| `PUT` | `/api/v1/settings` | Update user preferences or encrypted LLM keys | Required | Sync |
+| `DELETE`| `/api/v1/delete` | Immediate hard deletion of user data or specific document | Required | Sync |
 
 ---
 
@@ -66,9 +67,14 @@ All error responses strictly follow the RFC 7807 problem details specification:
   "environment": "production",
   "ml_engine": {
     "device": "cuda:0",
-    "vram_allocated_mb": 1150.4,
-    "vram_total_mb": 4096.0,
-    "models_loaded": ["perplexity-small", "classifier-distilroberta"]
+    "measured_peak_vram_mb": 1184.2,
+    "total_vram_mb": 4096.0,
+    "system_ram_used_mb": 4820.0,
+    "system_ram_total_mb": 24576.0,
+    "models_loaded": {
+      "gpu": ["distilgpt2", "distilroberta"],
+      "cpu": ["all-minilm-l6-v2", "nli-deberta-v3-small"]
+    }
   },
   "providers": {
     "default_improver": "groq",
@@ -87,15 +93,32 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 ```json
 {
   "document_id": "doc_98a7fbc2-...",
-  "filename": "draft_chapter.pdf",
-  "mime_type": "application/pdf",
+  "filename": "draft_manuscript.docx",
+  "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "word_count": 1420,
   "paragraph_count": 8,
   "paragraphs": [
     {
       "index": 0,
-      "text": "First extracted paragraph text...",
+      "text": "First extracted body paragraph text...",
       "char_count": 284
+    },
+    {
+      "index": 1,
+      "text": "| Trial | Dosage (mg) | Response Rate |\n|---|---|---|\n| 1 | 25 | 68% |\n| 2 | 50 | 84% |",
+      "char_count": 92
+    }
+  ],
+  "unsupported_elements": [
+    {
+      "type": "nested_table",
+      "location": "section_3_page_2",
+      "action_taken": "skipped"
+    },
+    {
+      "type": "footer",
+      "location": "page_1",
+      "action_taken": "skipped"
     }
   ]
 }
@@ -117,38 +140,56 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 }
 ```
 
-#### Response: `200 OK`
+#### Sync Response (`200 OK`) — When Word Count < Configurable Threshold (`1,000` words):
 ```json
 {
   "analysis_id": "an_c48b19...",
-  "calibrated_score": 0.82,
-  "classification_band": "ELEVATED_STATISTICAL_PRESENCE",
+  "synthetic_pattern_confidence": 0.82,
+  "classification_band": "SYNTHETIC_INDICATIVE",
+  "abstain_band_thresholds": {
+    "lower": 0.40,
+    "upper": 0.60
+  },
   "uncertainty_interval": {
     "lower": 0.74,
     "upper": 0.88,
     "confidence_level": 0.95
   },
+  "reliability_flag": "NORMAL",
   "disclaimer": "This analysis reflects statistical probability based on linguistic patterns and burstiness. It does not prove authorship. Human review is recommended.",
   "document_signals": {
     "mean_perplexity": 14.8,
     "perplexity_burstiness": 0.28,
     "type_token_ratio": 0.41,
     "hapax_legomena_ratio": 0.22,
-    "pos_entropy": 2.14
+    "pos_entropy": 2.14,
+    "negation_density": 0.015
   },
   "paragraphs": [
     {
       "index": 0,
-      "calibrated_score": 0.84,
-      "classification_band": "ELEVATED_STATISTICAL_PRESENCE",
+      "synthetic_pattern_confidence": 0.84,
+      "classification_band": "SYNTHETIC_INDICATIVE",
       "sentences": [
         {
           "index": 0,
-          "text": "The rapid advancement of deep learning architectures...",
+          "text": "The rapid advancement of deep learning architectures has driven unprecedented breakthroughs across computational linguistics.",
           "score": 0.89,
           "perplexity": 12.1,
           "burstiness_contribution": 0.18,
-          "highlight": true
+          "highlight": true,
+          "attribution_status": "ELEVATED_LOCAL_HOMOGENEITY",
+          "attribution_disclaimer": "Linguistic pattern shows lower local variation; this does not prove this sentence was generated by AI."
+        },
+        {
+          "index": 1,
+          "text": "In short, we agree.",
+          "score": null,
+          "perplexity": null,
+          "burstiness_contribution": null,
+          "highlight": false,
+          "attribution_status": "INSUFFICIENT_LENGTH",
+          "attribution_disclaimer": "Sentence under 10 words excluded from local attribution."
         }
       ]
     }
@@ -156,22 +197,45 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 }
 ```
 
----
-
-### 3.4 Check Report Export: `POST /api/v1/check/report`
-
-#### Request Body
+#### Async Response (`202 Accepted`) — When Word Count >= Configurable Threshold (`1,000` words) or Background Extraction:
 ```json
 {
-  "analysis_id": "an_c48b19...",
-  "format": "pdf",
-  "include_sentence_breakdown": true
+  "task_id": "task_e482fa...",
+  "status": "pending",
+  "message": "Document exceeds synchronous analysis threshold. Processing asynchronously.",
+  "poll_url": "/api/v1/tasks/task_e482fa...",
+  "estimated_time_ms": 2800
 }
 ```
 
-#### Response: `200 OK`
-- Content-Type: `application/pdf` or `application/json`
-- Content-Disposition: `attachment; filename="analysis-report-an_c48b19.pdf"`
+---
+
+### 3.4 Task Status Polling: `GET /api/v1/tasks/{task_id}`
+
+#### Response: `200 OK` (Processing)
+```json
+{
+  "task_id": "task_e482fa...",
+  "status": "processing",
+  "progress": 0.65,
+  "created_at": "2026-11-21T10:15:00Z"
+}
+```
+
+#### Response: `200 OK` (Completed)
+```json
+{
+  "task_id": "task_e482fa...",
+  "status": "completed",
+  "result": {
+    "analysis_id": "an_c48b19...",
+    "synthetic_pattern_confidence": 0.82,
+    "classification_band": "SYNTHETIC_INDICATIVE",
+    "uncertainty_interval": {"lower": 0.74, "upper": 0.88, "confidence_level": 0.95},
+    "disclaimer": "This analysis reflects statistical probability based on linguistic patterns and burstiness. It does not prove authorship. Human review is recommended."
+  }
+}
+```
 
 ---
 
@@ -180,11 +244,14 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 #### Request Body
 ```json
 {
-  "text": "We utilized a multi-stage approach because we wanted to verify...",
+  "text": "On November 12, 2023, Dr. Grant did not find 42.8 kg of specimens in Area 51 (Smith et al., 2021).",
   "mode": "academic_clarity",
   "protection_config": {
     "protect_citations": true,
     "protect_numbers": true,
+    "protect_dates": true,
+    "protect_units": true,
+    "protect_negations": true,
     "protect_urls": true,
     "protect_equations": true,
     "protect_named_entities": true
@@ -195,27 +262,32 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 
 *Valid `mode` values*: `natural_conversational`, `academic_clarity`, `professional`, `simple_readable`, `concise`, `formal`.
 
-#### Response: `200 OK`
+#### Sync Response (`200 OK`)
 ```json
 {
   "revision_id": "rev_78fa02...",
   "mode": "academic_clarity",
-  "original_text": "We utilized a multi-stage approach because we wanted to verify...",
-  "rewritten_text": "A multi-stage methodology was implemented to verify...",
+  "original_text": "On November 12, 2023, Dr. Grant did not find 42.8 kg of specimens in Area 51 (Smith et al., 2021).",
+  "rewritten_text": "On November 12, 2023, Dr. Grant did not detect 42.8 kg of specimens within Area 51 (Smith et al., 2021).",
   "diff": [
-    {"type": "delete", "value": "We utilized"},
-    {"type": "insert", "value": "A multi-stage methodology was implemented"},
-    {"type": "equal", "value": " to verify"}
+    {"type": "equal", "value": "On November 12, 2023, Dr. Grant did not "},
+    {"type": "delete", "value": "find"},
+    {"type": "insert", "value": "detect"},
+    {"type": "equal", "value": " 42.8 kg of specimens within Area 51 (Smith et al., 2021)."}
   ],
   "verification": {
     "status": "PASSED",
-    "similarity_score": 0.92,
+    "similarity_score": 0.94,
+    "similarity_note": "Embedding cosine similarity evaluates proximity in latent space; it does not guarantee logical equivalence.",
     "checks": {
       "numeric_integrity": {"passed": true, "missing_numbers": []},
+      "date_integrity": {"passed": true, "missing_dates": []},
+      "unit_integrity": {"passed": true, "missing_units": []},
+      "negation_integrity": {"passed": true, "missing_negations": []},
       "citation_integrity": {"passed": true, "missing_citations": []},
       "entity_integrity": {"passed": true, "missing_entities": []},
       "paragraph_alignment": {"passed": true, "source_count": 1, "target_count": 1},
-      "contradiction_check": {"passed": true, "contradiction_probability": 0.02}
+      "contradiction_check": {"passed": true, "contradiction_probability": 0.01}
     },
     "flags": []
   }
@@ -229,8 +301,8 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 #### Request Body
 ```json
 {
-  "source_text": "Dr. Sarah Miller discovered 42 new exoplanets in sector 9.",
-  "target_text": "Dr. Miller discovered forty exoplanets in sector 9."
+  "source_text": "Dr. Sarah Miller discovered 42 new exoplanets in sector 9 on January 5.",
+  "target_text": "Dr. Miller discovered forty exoplanets in sector 9 on January 8."
 }
 ```
 
@@ -239,16 +311,20 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 {
   "status": "NEEDS_REVIEW",
   "similarity_score": 0.86,
+  "similarity_note": "Embedding cosine similarity evaluates proximity in latent space; it does not guarantee logical equivalence.",
   "checks": {
     "numeric_integrity": {
       "passed": false,
       "missing_numbers": ["42"]
     },
-    "citation_integrity": {"passed": true, "missing_citations": []},
-    "entity_integrity": {
-      "passed": true,
-      "missing_entities": []
+    "date_integrity": {
+      "passed": false,
+      "missing_dates": ["January 5"]
     },
+    "unit_integrity": {"passed": true, "missing_units": []},
+    "negation_integrity": {"passed": true, "missing_negations": []},
+    "citation_integrity": {"passed": true, "missing_citations": []},
+    "entity_integrity": {"passed": true, "missing_entities": []},
     "paragraph_alignment": {"passed": true, "source_count": 1, "target_count": 1},
     "contradiction_check": {"passed": true, "contradiction_probability": 0.08}
   },
@@ -257,48 +333,11 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
       "severity": "CRITICAL",
       "code": "NUMERIC_MISMATCH",
       "message": "Numeric value '42' from source is missing or altered in target text."
-    }
-  ]
-}
-```
-
----
-
-### 3.7 Export Rewritten Document: `POST /api/v1/export`
-
-#### Request Body
-```json
-{
-  "text": "The finalized rewritten text content...",
-  "format": "docx",
-  "title": "Manuscript_Revised"
-}
-```
-
-#### Response: `200 OK`
-- Returns binary stream (`application/vnd.openxmlformats-officedocument.wordprocessingml.document` or `application/pdf`).
-
----
-
-### 3.8 User History & Opt-in Data: `GET /api/v1/history`
-
-#### Query Parameters:
-- `limit` (default: 20, max: 100)
-- `offset` (default: 0)
-- `type` (`check` | `improve` | `all`)
-
-#### Response: `200 OK`
-```json
-{
-  "total": 3,
-  "items": [
+    },
     {
-      "id": "an_c48b19...",
-      "type": "check",
-      "created_at": "2026-11-21T10:14:00Z",
-      "summary": "The rapid advancement of deep learning...",
-      "calibrated_score": 0.82,
-      "status": "completed"
+      "severity": "CRITICAL",
+      "code": "DATE_MISMATCH",
+      "message": "Date 'January 5' from source was altered or omitted in target text."
     }
   ]
 }
@@ -306,51 +345,17 @@ Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximu
 
 ---
 
-### 3.9 User Settings: `GET /api/v1/settings` & `PUT /api/v1/settings`
+### 3.7 Check Report Export: `POST /api/v1/check/report`
+- Accepts `analysis_id` and `format` (`pdf` or `json`). Returns PDF stream or structured analysis JSON.
 
-#### `GET /api/v1/settings` Response: `200 OK`
-```json
-{
-  "store_history_default": false,
-  "default_mode": "academic_clarity",
-  "sensitivity_preference": "balanced",
-  "custom_providers": {
-    "groq_configured": true,
-    "openrouter_configured": false,
-    "anthropic_configured": false
-  }
-}
-```
+### 3.8 Export Rewritten Document: `POST /api/v1/export`
+- Accepts `text`, `format` (`docx`, `pdf`, `markdown`), and `title`. Returns generated document stream.
 
-#### `PUT /api/v1/settings` Request Body
-```json
-{
-  "store_history_default": true,
-  "default_mode": "professional",
-  "custom_api_keys": {
-    "groq_api_key": "gsk_..."
-  }
-}
-```
+### 3.9 User History & Opt-in Data: `GET /api/v1/history`
+- Query parameters: `limit`, `offset`, `type`. Returns paginated list of opted-in analyses and revisions.
 
----
+### 3.10 User Settings: `GET /api/v1/settings` & `PUT /api/v1/settings`
+- Manage default improver mode, opt-in defaults, and encrypted BYOK API keys (Groq, OpenRouter, Anthropic, OpenAI).
 
-### 3.10 Hard Deletion: `DELETE /api/v1/delete`
-
-#### Request Body
-```json
-{
-  "target": "document",
-  "id": "doc_98a7fbc2-..."
-}
-```
-*(Or `"target": "all_user_data"` to trigger an immediate cascade purge of user account, settings, revisions, and analyses).*
-
-#### Response: `200 OK`
-```json
-{
-  "status": "purged",
-  "records_deleted": 14,
-  "timestamp": "2026-11-21T10:30:00Z"
-}
-```
+### 3.11 Hard Deletion: `DELETE /api/v1/delete`
+- Request body: `{"target": "document", "id": "..."}` or `{"target": "all_user_data"}`. Cascade removes records immediately.
