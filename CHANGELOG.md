@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - 2026-11-21
+### Added - 2026-11-21 (Phase 1: Document Extraction & Normalization)
+- `backend/services/parser/security.py`: Deep file validation module enforcing configurable size limits, magic bytes, decompression bomb defenses (ratio and uncompressed limits), macro-enabled document rejection (`.docm`, `vbaProject.bin`), and structural file checks.
+- `backend/services/parser/normalizer.py`: Deterministic text normalization module preserving original raw text separately, handling Unicode NFC composition (preserving math superscripts like $E=mc^2$), unfolding typographic ligatures, stitching hyphenated linebreaks, and segmenting sentences while respecting common abbreviations (`Dr.`, `et al.`).
+- `backend/services/parser/extractor.py`: Unified `DocumentParser` extracting TXT, DOCX (`python-docx`), and PDF (`PyMuPDF`) into structured `ParagraphModel` and `SentenceModel` objects; extracts standard grid tables to Markdown pipe-tables and logs unsupported complex tables or drawings in `unsupported_elements` metadata.
+- `backend/core/task_manager.py`: In-memory `asyncio` task manager with clean abstraction interface (`TaskManagerBase`) for async job dispatch and status polling.
+- `tests/test_document_extract.py`: 13 automated unit tests validating security rules, bomb/macro rejection, normalization preservation, PDF/DOCX/TXT parsing, table formatting, and async task execution (all 13 passing).
+
+### Added - 2026-11-21 (Phase 0: Scaffolding)
 - Repository initialization and directory scaffolding (`frontend/`, `backend/`, `ml/`, `tests/`, `datasets/`, `docs/`).
 - `AGENTS.md`: Mandatory operational rules for AI assistants and contributors (context acquisition, no faked APIs/mocks, testing enforcement, hardware boundaries).
 - `GEMINI.md`: Antigravity/Gemini execution guidance.
