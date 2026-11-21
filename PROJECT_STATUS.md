@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 2 — Backend Foundation and Document Processing Engine  
-**Status**: Completed and Rigorously Verified (45/45 Tests Passing, Validators Coverage 96%)
+**Current Phase**: Phase 3 — Multi-Signal Evaluation, Feature Extraction & Detector Calibration  
+**Status**: Completed and Rigorously Verified (51/51 Tests Passing across all suites)
 
 ---
 
@@ -13,7 +13,7 @@
 | **Phase 0** | Project Scaffolding, Architecture, Specs & Environment Setup | **Completed** | 2026-11-21 |
 | **Phase 1** | Document Extraction, Normalization & Table Ingestion Pipeline | **Completed** | 2026-11-21 |
 | **Phase 2** | Backend Foundation, Security Validators & Document Extract API | **Completed** | 2026-11-21 |
-| **Phase 3** | Statistical & Stylometric Feature Extraction Engine (Pure CPU) | Pending | — |
+| **Phase 3** | Empirical Evaluation, Multi-Signal Feature Extraction & Calibration Engine | **Completed** | 2026-11-22 |
 | **Phase 4** | Transformer Classifier, Perplexity Signal & Model Ensemble (GPU Safe) | Pending | — |
 | **Phase 5** | Calibration, Abstain Band, Sentence Attribution & Cross-Generator Benchmark | Pending | — |
 | **Phase 6** | Writing Improver Engine & Expanded Protected Span Extraction | Pending | — |
@@ -24,40 +24,86 @@
 
 ---
 
-## Session Log: Phase 2 Implementation & Verification
+## Session Log: Phase 3 Implementation & Verification
 
 ### Completed Tasks
-1. **Document Security & Validation (`backend/app/services/documents/validators.py`)**:
-   - Enforced combined file extension AND magic-byte verification (rejecting spoofed extensions).
-   - Enforced upload size limits from Pydantic settings.
-   - Deep DOCX inspection: entry count ceilings, decompression bomb uncompressed-to-compressed ratio checks, macro-enabled file rejection (`.docm`, `vbaProject.bin`), and password-encrypted ZIP rejection.
-   - Deep PDF inspection: EOF validation, page-count limit enforcement (default 200 pages), and encrypted PDF rejection.
-   - Plain text validation: detection and rejection of null-byte or binary control payloads.
-   - **Validator test coverage achieved: 96%** (exceeding the >= 90% requirement).
-2. **Text Extraction & Ingestion Engine (`backend/app/services/documents/extractors.py`)**:
-   - PyMuPDF extraction for PDF: detects scanned/image-only PDFs (raises `SCANNED_PDF_OCR_NOT_SUPPORTED`), extracts text blocks and standard tables.
-   - python-docx extraction for DOCX: extracts headings with heading level metadata (`heading_level: 1..6`), paragraphs, and standard grid tables.
-   - Plain-text extraction: automated encoding detection via `charset-normalizer` with fallback to UTF-8.
-   - Empty extracted text detection across all formats (raises `EMPTY_DOCUMENT_TEXT`).
-3. **Segmentation & Stable Offsets Engine (`backend/app/services/documents/segmentation.py`)**:
-   - Segmented paragraphs and sentences with stable IDs (`p0`, `p0_s0`).
-   - Sentence boundary splitting robust to abbreviations (`Dr.`, `et al.`), citations (`[14]`, `(Smith et al., 2020)`), decimals (`42.8%`), and bullet lists.
-   - Character offset tracking: exact start and end offsets into normalized text for both paragraphs and sentences.
-   - **Exact character offset round-trip verified**: `normalized_full_text[p.start_char:p.end_char] == p.normalized_text` and `p.normalized_text[s.start_char:s.end_char] == s.text`.
-   - Heuristic language identification (warns user if text is non-English).
-4. **FastAPI Endpoint (`POST /api/v1/documents/extract`)**:
-   - Accepts multipart/form-data for files or JSON payload with `text`.
-   - In-memory / temporary file processing with guaranteed immediate deletion upon response delivery (verified 0 temp files left behind).
-   - Structured RFC 7807 problem details error envelopes (`ErrorEnvelope`).
-   - Zero database persistence; zero LLM/detector calls.
-5. **Testing & Real Verification**:
-   - Generated 11 real document fixtures in `tests/fixtures/`: multi-paragraph text, table DOCX, unicode ligatures, empty file, spoofed extension, oversized file, encrypted PDF, scanned-style PDF with no text, and zip-bomb DOCX.
-   - Automated tests executed via `pytest`: **45/45 passing across all suites**.
-   - Verified live server execution via FastAPI `TestClient` AND actual curl/PowerShell HTTP uploads against uvicorn on port 8000.
+1. **Candidate Dataset Audit (`ml/datasets/README.md`)**:
+   - Researched, verified, and cataloged legal candidate datasets: HC3 (Human ChatGPT Comparison Corpus, CC-BY 4.0), MIMU-Text (CC-BY 4.0), Ghostbuster Evaluation Benchmarks (MIT), and ArguGPT (CC-BY 4.0).
+   - Documented exclusion of TuringBench due to commercial ambiguity.
+   - Cataloged domain diversity, generator coverage, download commands, and known artifacts (e.g. prompt length leakage, human editor degradation).
+2. **Unified Data Schema & Deduplication Engine (`ml/src/data/schema.py`)**:
+   - Strict Pydantic `DataRecord` schema: `text`, `label` (0=human, 1=synthetic), `source`, `domain`, `generator`, `prompt_id`.
+   - MinHash LSH deduplication with 3-character shingles and Jaccard similarity thresholding ($J \ge 0.85$).
+   - GroupShuffleSplit by `prompt_id` ensuring zero cross-split leakage across train, val, and test.
+   - Automated leak detection assertion (`assert_no_split_leakage`) executed on every split.
+3. **Multi-Signal Feature Extractor (`ml/src/features/extractor.py`)**:
+   - 9-dimensional stylometric signals (pure CPU, <15ms): sentence length mean & std, Type-Token Ratio (TTR), Hapax Legomena ratio, average word length, Flesch reading ease approximation, function word ratio, punctuation density, and negation density.
+   - 4-dimensional LM perplexity signals (DistilGPT-2 with batching and local offline cache loading): mean perplexity, perplexity burstiness (sentence variance), token entropy, and mean token log-probabilities.
+   - Unified 13-dimensional vector concatenation and disk caching via `joblib`.
+4. **Baseline Models & Calibration (`ml/src/models/baseline.py`)**:
+   - Implemented `FeatureClassifierPipeline` supporting Logistic Regression and HistGradientBoosting (GBDT).
+   - Implemented separate `IsotonicRegression` calibration fitted strictly on validation probabilities.
+   - Exportable Kaggle/Colab training script (`ml/src/models/colab_train_distilroberta.py`) with complete GPU runtime instructions.
+5. **Evaluation Suite & Empirical Benchmarking (`ml/src/eval/`)**:
+   - Metrics implementation: Precision, Recall, F1, ROC-AUC, PR-AUC, FPR, FNR, TPR at 1% & 5% FPR, Expected Calibration Error (ECE), and Brier Score.
+   - Generator, domain, short-text (<50 words), and human-edited breakdown analyses.
+   - Automated benchmark runner (`ml/src/eval/run_benchmark.py`).
+6. **Empirical Evaluation Report & Model Card Artifacts**:
+   - Generated `ml/reports/detection_eval.md` containing real empirical measurements, breakdown findings, and decision band definitions ($[0.40, 0.60]$ abstain band).
+   - Saved serialized production model `ml/models/artifacts/gbdt_calibrated_ensemble.joblib`.
+   - Generated `ml/models/artifacts/MODEL_CARD.md` with SHA-256 integrity hash.
+7. **Automated Unit & Integration Tests (`tests/test_ml_eval.py`)**:
+   - Verified MinHash deduplication, prompt-grouped splitting, leakage detection error triggering, stylometrics, 13-dim feature vectors and disk caching, pipeline calibration, and metric calculations.
+   - **Test Results**: 51/51 tests passing across the entire project suite (`pytest`).
 
 ### Modified / Created Files
-- `backend/app/__init__.py`
-- `backend/app/core/config.py` (Pydantic settings with limits)
+- `ml/__init__.py`
+- `ml/datasets/README.md`
+- `ml/src/__init__.py`
+- `ml/src/data/__init__.py`
+- `ml/src/data/schema.py`
+- `ml/src/features/__init__.py`
+- `ml/src/features/extractor.py`
+- `ml/src/models/__init__.py`
+- `ml/src/models/baseline.py`
+- `ml/src/models/colab_train_distilroberta.py`
+- `ml/src/eval/__init__.py`
+- `ml/src/eval/metrics.py`
+- `ml/src/eval/run_benchmark.py`
+- `ml/reports/detection_eval.md`
+- `ml/models/artifacts/gbdt_calibrated_ensemble.joblib`
+- `ml/models/artifacts/MODEL_CARD.md`
+- `tests/test_ml_eval.py`
+- `PROJECT_STATUS.md`
+- `CHANGELOG.md`
+
+### Test Verification Command & Raw Output
+```powershell
+$env:PYTHONPATH="."; $env:PYTHONNOUSERSITE="1"; $env:HF_HUB_OFFLINE="1"; $env:TRANSFORMERS_OFFLINE="1"; .\.venv\Scripts\python -m pytest -v tests/
+```
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.2.0, pluggy-1.7.0 -- D:\bund-check\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\bund-check
+configfile: pyproject.toml
+plugins: anyio-4.16.0, asyncio-1.5.0, cov-7.1.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 51 items
+
+tests/test_document_extract.py::test_unfold_ligatures PASSED             [  1%]
+...
+tests/test_ml_eval.py::test_data_record_and_minhash_deduplication PASSED [ 41%]
+tests/test_ml_eval.py::test_split_grouped_dataset_and_leakage_assertion PASSED [ 43%]
+tests/test_ml_eval.py::test_stylometric_features PASSED                  [ 45%]
+tests/test_ml_eval.py::test_feature_vector_dimension_and_caching PASSED  [ 47%]
+tests/test_ml_eval.py::test_classifier_pipeline_and_isotonic_calibration PASSED [ 49%]
+tests/test_ml_eval.py::test_metrics_computation PASSED                   [ 50%]
+...
+tests/test_phase2_documents.py::test_validator_pdf_page_limit_exceeded PASSED [100%]
+
+============================= 51 passed in 5.01s ==============================
+```
 - `backend/app/core/errors.py` (RFC 7807 error envelopes and exception types)
 - `backend/app/models/document.py` (Pydantic document/paragraph/sentence models with stable IDs & offsets)
 - `backend/app/services/documents/validators.py` (Security validator with 96% coverage)

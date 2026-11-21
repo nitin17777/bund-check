@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 3: Multi-Signal Evaluation, Feature Extraction & Detector Calibration)
+- `ml/datasets/README.md`: Formal provenance audit of candidate datasets (HC3, MIMU-Text, Ghostbuster, ArguGPT) with license details, domain mappings, generator distributions, and documented exclusion of TuringBench.
+- `ml/src/data/schema.py`: Unified `DataRecord` schema with label definitions (0=human, 1=synthetic), MinHash LSH deduplication across 3-character shingles, and `GroupShuffleSplit` by `prompt_id` with automated leakage detection assertions.
+- `ml/src/features/extractor.py`: Multi-signal feature extractor computing 9 CPU stylometric metrics (sentence length stats, TTR, Hapax, Flesch reading ease, function word ratio, punctuation, negation density) and 4 LM metrics (mean perplexity, burstiness/sentence variance, token entropy, mean log-probs via DistilGPT-2 with batching and local caching) yielding a 13-dimensional feature representation with disk caching.
+- `ml/src/models/baseline.py`: `FeatureClassifierPipeline` supporting Logistic Regression and HistGradientBoosting (GBDT) coupled with held-out validation `IsotonicRegression` probability calibration.
+- `ml/src/models/colab_train_distilroberta.py`: Standalone, self-contained Google Colab / Kaggle script for fine-tuning `distilroberta-base` on GPU.
+- `ml/src/eval/metrics.py`: Rigorous evaluation module computing Precision, Recall, F1, ROC-AUC, PR-AUC, FPR, FNR, Expected Calibration Error (ECE), Brier Score, and TPR at fixed 1% and 5% FPR operating points with generator and domain breakdowns.
+- `ml/src/eval/run_benchmark.py`: End-to-end benchmark pipeline evaluating model baselines, writing the empirical evaluation report, saving model artifacts, and generating the Model Card.
+- `ml/reports/detection_eval.md`: Empirical evaluation report detailing measured test metrics, breakdown vulnerabilities (short texts <50 words and human-edited machine text), model recommendation (calibrated GBDT ensemble), and calibrated decision bands (with a 0.40–0.60 abstain band).
+- `ml/models/artifacts/gbdt_calibrated_ensemble.joblib`: Serialized calibrated GBDT ensemble artifact.
+- `ml/models/artifacts/MODEL_CARD.md`: Production model card with SHA-256 integrity hash, training details, quantitative metrics, and plain-language limitations.
+- `tests/test_ml_eval.py`: 6 automated unit and integration tests verifying schema validation, MinHash deduplication, leakage prevention, stylometrics, feature extraction shapes, calibration, and metric computation.
+
 ### Added - 2026-11-21 (Phase 2: Backend Foundation and Document Processing)
 - `backend/app/services/documents/validators.py`: Comprehensive security validators enforcing size limits, extension and magic-byte consistency, DOCX ZIP decompression ratio and entry count defenses, rejection of macro-enabled files (`.docm`, `vbaProject.bin`), password-protected DOCX/PDF rejection, and PDF page count limits. (96% test coverage).
 - `backend/app/services/documents/segmentation.py`: Segmentation engine providing paragraph normalization, sentence boundary detection robust to abbreviations, citations (`[14]`, `(Smith et al., 2020)`), and bullet lists, with stable ID generation and exact character offset calculation.
