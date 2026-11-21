@@ -19,5 +19,19 @@ class Settings(BaseSettings):
     MAX_ZIP_ENTRIES: int = 1000
     MAX_PDF_PAGES: int = 200
 
+    # Detection & ML Settings
+    MAX_CHECK_WORD_COUNT: int = 50000
+    SYNC_WORD_THRESHOLD: int = 1000
+    CHECK_TIMEOUT_SECONDS: float = 60.0
+    MODEL_ARTIFACT_PATH: str = "ml/models/artifacts/gbdt_calibrated_ensemble.joblib"
+    MODEL_DEVICE: str = "cpu"  # "cpu" or "cuda"
+    ENABLE_GPU: bool = False
+    
+    # Abstain band and word count thresholds
+    ABSTAIN_LOWER_THRESHOLD: float = 0.40
+    ABSTAIN_UPPER_THRESHOLD: float = 0.60
+    MIN_WORD_COUNT_RELIABLE: int = 150
+    MIN_WORD_COUNT_EVALUATE: int = 50
+
 
 settings = Settings()

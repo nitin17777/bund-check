@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 4: Backend Detector Integration & Content Check API)
+- `backend/app/services/detection/loader.py`: Lazy, memory-safe singleton model registry loading the calibrated GBDT ensemble artifact (`gbdt_calibrated_ensemble.joblib`) on CPU by default with GPU-readiness for 4GB RTX 2050.
+- `backend/app/services/detection/detector.py`: Core detection engine reusing feature extractors directly from `ml/`, applying Isotonic calibration, enforcing the 0.40–0.60 abstain band, computing empirical 95% uncertainty intervals, extracting top contributing signals with plain-language explanations, generating honest sentence-level indicators, and enforcing short-text length gating (<50 and <150 words).
+- `backend/app/services/detection/report.py`: Comprehensive analysis report generator producing structured JSON and responsive, styled HTML reports including limitations, model version, and model hash.
+- `backend/app/api/v1/endpoints/check.py`: FastAPI endpoints for `POST /api/v1/check` (supporting raw text or pre-extracted Document) and `POST /api/v1/check/report` with asyncio timeout protection and privacy-preserving logging (zero document text logged).
+- `backend/app/models/detection.py`: Typed Pydantic models for check requests, check responses, contributing signals, sentence indicators, and limitations blocks.
+- `tests/test_phase4_detection.py`: 6 automated unit and integration tests verifying schema conformance, exact numeric consistency between API and offline ML code, short-text length warnings, report exports, end-to-end extraction-to-check flow, and latency benchmarks (500, 2,000, and 10,000 words).
+
 ### Added - 2026-11-22 (Phase 3: Multi-Signal Evaluation, Feature Extraction & Detector Calibration)
 - `ml/datasets/README.md`: Formal provenance audit of candidate datasets (HC3, MIMU-Text, Ghostbuster, ArguGPT) with license details, domain mappings, generator distributions, and documented exclusion of TuringBench.
 - `ml/src/data/schema.py`: Unified `DataRecord` schema with label definitions (0=human, 1=synthetic), MinHash LSH deduplication across 3-character shingles, and `GroupShuffleSplit` by `prompt_id` with automated leakage detection assertions.
