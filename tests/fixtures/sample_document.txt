@@ -1,0 +1,8 @@
+This is the first paragraph with citation [14] and formula ΔE = mc².
+
+The second paragraph analyzes 42.8% of specimens (Smith et al., 2020).
+Dr. Alan Grant noted: 'This demonstrates stability.'
+
+Third paragraph has bullet points:
+- Item 1: Accuracy is 98.5%
+- Item 2: Latency is < 50ms

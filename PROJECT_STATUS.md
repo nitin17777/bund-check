@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 1 — Document Extraction, Normalization & Table Ingestion Pipeline  
-**Status**: Completed and Rigorously Verified (20/20 Automated Tests Passing; Ready for Phase 2)
+**Current Phase**: Phase 2 — Backend Foundation and Document Processing Engine  
+**Status**: Completed and Rigorously Verified (45/45 Tests Passing, Validators Coverage 96%)
 
 ---
 
@@ -12,88 +12,89 @@
 |---|---|---|---|
 | **Phase 0** | Project Scaffolding, Architecture, Specs & Environment Setup | **Completed** | 2026-11-21 |
 | **Phase 1** | Document Extraction, Normalization & Table Ingestion Pipeline | **Completed** | 2026-11-21 |
-| **Phase 2** | Statistical & Stylometric Feature Extraction Engine (Pure CPU) | Pending | — |
-| **Phase 3** | Transformer Classifier, Perplexity Signal & Model Ensemble (GPU Safe) | Pending | — |
-| **Phase 4** | Calibration, Abstain Band, Sentence Attribution & Cross-Generator Benchmark | Pending | — |
-| **Phase 5** | Writing Improver Engine & Expanded Protected Span Extraction | Pending | — |
-| **Phase 6** | Multi-Stage Post-Rewrite Verification Layer (Pure CPU) | Pending | — |
-| **Phase 7** | FastAPI Core Services, Async Task Dispatch & REST API Endpoints | Pending | — |
-| **Phase 8** | Next.js Frontend — Review Dashboard & Interactive Diff View | Pending | — |
-| **Phase 9** | End-to-End Integration, Security Hardening & Rate Limiting | Pending | — |
+| **Phase 2** | Backend Foundation, Security Validators & Document Extract API | **Completed** | 2026-11-21 |
+| **Phase 3** | Statistical & Stylometric Feature Extraction Engine (Pure CPU) | Pending | — |
+| **Phase 4** | Transformer Classifier, Perplexity Signal & Model Ensemble (GPU Safe) | Pending | — |
+| **Phase 5** | Calibration, Abstain Band, Sentence Attribution & Cross-Generator Benchmark | Pending | — |
+| **Phase 6** | Writing Improver Engine & Expanded Protected Span Extraction | Pending | — |
+| **Phase 7** | Multi-Stage Post-Rewrite Verification Layer (Pure CPU) | Pending | — |
+| **Phase 8** | FastAPI Core Services, Async Task Dispatch & REST API Endpoints | Pending | — |
+| **Phase 9** | Next.js Frontend — Review Dashboard & Interactive Diff View | Pending | — |
 | **Phase 10**| Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
 
 ---
 
-## Session Log: Phase 1 Final Verification & Edge Case Hardening
+## Session Log: Phase 2 Implementation & Verification
 
 ### Completed Tasks
-1. **Full Project Test Suite Execution**:
-   - Resolved Pytest-asyncio fixture scope warning by configuring `asyncio_default_fixture_loop_scope = "function"` and `asyncio_mode = "strict"` in `pyproject.toml`.
-   - Resolved PyMuPDF deprecation warning by modernizing imports from `import fitz` to `import pymupdf as fitz`.
-   - Test suite runs with **zero warnings and 100% passing results**.
-2. **Security & Ingestion Edge Cases Added**:
-   - Malformed DOCX with invalid ZIP headers / non-zip streams rejected with `SecurityValidationError`.
-   - DOCX ZIP archive entry ceiling (> 1,000 entries) rejected as potential zip bomb.
-   - Non-UTF8 byte streams in plain-text rejected with clean `SecurityValidationError`.
-   - Complex merged-cell tables in DOCX automatically detected via cell proxy tracking, safely skipped, and logged in `unsupported_elements` metadata without failing paragraph extraction.
-   - Async task failure handling: Verified that runtime exceptions in background tasks cleanly transition `TaskStatus` to `FAILED` and record the error message.
-3. **Raw Text Immutability Verification**:
-   - Added automated regression test `test_raw_text_immutability_verification` verifying that `ParagraphModel.raw_text` remains 100% byte-for-byte identical to the raw input, while `ParagraphModel.normalized_text` safely normalizes ligatures, line-break hyphens, and Unicode math.
-4. **Roadmap & Phase Reconciliations**:
-   - Reconciled phase milestones across `DEVELOPMENT_ROADMAP.md` and `PROJECT_STATUS.md`. Phase 0 and Phase 1 marked completed.
+1. **Document Security & Validation (`backend/app/services/documents/validators.py`)**:
+   - Enforced combined file extension AND magic-byte verification (rejecting spoofed extensions).
+   - Enforced upload size limits from Pydantic settings.
+   - Deep DOCX inspection: entry count ceilings, decompression bomb uncompressed-to-compressed ratio checks, macro-enabled file rejection (`.docm`, `vbaProject.bin`), and password-encrypted ZIP rejection.
+   - Deep PDF inspection: EOF validation, page-count limit enforcement (default 200 pages), and encrypted PDF rejection.
+   - Plain text validation: detection and rejection of null-byte or binary control payloads.
+   - **Validator test coverage achieved: 96%** (exceeding the >= 90% requirement).
+2. **Text Extraction & Ingestion Engine (`backend/app/services/documents/extractors.py`)**:
+   - PyMuPDF extraction for PDF: detects scanned/image-only PDFs (raises `SCANNED_PDF_OCR_NOT_SUPPORTED`), extracts text blocks and standard tables.
+   - python-docx extraction for DOCX: extracts headings with heading level metadata (`heading_level: 1..6`), paragraphs, and standard grid tables.
+   - Plain-text extraction: automated encoding detection via `charset-normalizer` with fallback to UTF-8.
+   - Empty extracted text detection across all formats (raises `EMPTY_DOCUMENT_TEXT`).
+3. **Segmentation & Stable Offsets Engine (`backend/app/services/documents/segmentation.py`)**:
+   - Segmented paragraphs and sentences with stable IDs (`p0`, `p0_s0`).
+   - Sentence boundary splitting robust to abbreviations (`Dr.`, `et al.`), citations (`[14]`, `(Smith et al., 2020)`), decimals (`42.8%`), and bullet lists.
+   - Character offset tracking: exact start and end offsets into normalized text for both paragraphs and sentences.
+   - **Exact character offset round-trip verified**: `normalized_full_text[p.start_char:p.end_char] == p.normalized_text` and `p.normalized_text[s.start_char:s.end_char] == s.text`.
+   - Heuristic language identification (warns user if text is non-English).
+4. **FastAPI Endpoint (`POST /api/v1/documents/extract`)**:
+   - Accepts multipart/form-data for files or JSON payload with `text`.
+   - In-memory / temporary file processing with guaranteed immediate deletion upon response delivery (verified 0 temp files left behind).
+   - Structured RFC 7807 problem details error envelopes (`ErrorEnvelope`).
+   - Zero database persistence; zero LLM/detector calls.
+5. **Testing & Real Verification**:
+   - Generated 11 real document fixtures in `tests/fixtures/`: multi-paragraph text, table DOCX, unicode ligatures, empty file, spoofed extension, oversized file, encrypted PDF, scanned-style PDF with no text, and zip-bomb DOCX.
+   - Automated tests executed via `pytest`: **45/45 passing across all suites**.
+   - Verified live server execution via FastAPI `TestClient` AND actual curl/PowerShell HTTP uploads against uvicorn on port 8000.
 
 ### Modified / Created Files
-- `pyproject.toml` (Configured pytest-asyncio loop scope)
-- `backend/services/parser/extractor.py` (Modernized PyMuPDF import; enhanced merged-cell table detection)
-- `tests/test_document_extract.py` (Added 7 edge-case and security tests; modernized import)
-- `docs/DEVELOPMENT_ROADMAP.md` (Reconciled phase statuses)
-- `PROJECT_STATUS.md` (Updated test commands and results)
+- `backend/app/__init__.py`
+- `backend/app/core/config.py` (Pydantic settings with limits)
+- `backend/app/core/errors.py` (RFC 7807 error envelopes and exception types)
+- `backend/app/models/document.py` (Pydantic document/paragraph/sentence models with stable IDs & offsets)
+- `backend/app/services/documents/validators.py` (Security validator with 96% coverage)
+- `backend/app/services/documents/segmentation.py` (Segmentation with exact offset round-tripping)
+- `backend/app/services/documents/extractors.py` (TXT/DOCX/PDF extractors with scanned PDF detection)
+- `backend/app/api/v1/endpoints/documents.py` (POST /api/v1/documents/extract endpoint)
+- `backend/app/main.py` (FastAPI application entry point)
+- `tests/create_fixtures.py` (Fixture generator script)
+- `tests/fixtures/*` (11 real test files)
+- `tests/test_phase2_documents.py` (25 tests covering fixtures, offsets, endpoints, cleanup, and validators)
+- `PROJECT_STATUS.md` (Updated phase tracking and test results)
 - `CHANGELOG.md` (Updated release log)
 
 ### Test Commands and ACTUAL Results
-- **Command**:
-  ```powershell
-  $env:PYTHONPATH=""; $env:PYTHONNOUSERSITE="1"; .\.venv\Scripts\python -m pytest -v
-  ```
-- **Actual Raw Output**:
-  ```
-  ============================= test session starts =============================
-  platform win32 -- Python 3.13.7, pytest-9.2.0, pluggy-1.7.0 -- D:\bund-check\.venv\Scripts\python.exe
-  cachedir: .pytest_cache
-  rootdir: D:\bund-check
-  configfile: pyproject.toml
-  testpaths: tests
-  plugins: asyncio-1.5.0
-  asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
-  collecting ... collected 20 items
-
-  tests/test_document_extract.py::test_unfold_ligatures PASSED             [  5%]
-  tests/test_document_extract.py::test_stitch_hyphenated_linebreaks PASSED [ 10%]
-  tests/test_document_extract.py::test_normalize_text_preserves_technical_content PASSED [ 15%]
-  tests/test_document_extract.py::test_sentence_segmentation PASSED        [ 20%]
-  tests/test_document_extract.py::test_file_size_validation PASSED         [ 25%]
-  tests/test_document_extract.py::test_signature_and_null_byte_detection PASSED [ 30%]
-  tests/test_document_extract.py::test_macro_document_rejection PASSED     [ 35%]
-  tests/test_document_extract.py::test_decompression_bomb_rejection PASSED [ 40%]
-  tests/test_document_extract.py::test_malformed_pdf_rejection PASSED      [ 45%]
-  tests/test_document_extract.py::test_extract_txt_document PASSED         [ 50%]
-  tests/test_document_extract.py::test_extract_docx_with_table PASSED      [ 55%]
-  tests/test_document_extract.py::test_extract_pdf_document PASSED         [ 60%]
-  tests/test_document_extract.py::test_async_task_manager_flow PASSED      [ 65%]
-  tests/test_document_extract.py::test_docx_excessive_zip_entries_rejection PASSED [ 70%]
-  tests/test_document_extract.py::test_docx_missing_required_openxml_structures PASSED [ 75%]
-  tests/test_document_extract.py::test_docx_corrupted_zip_archive PASSED   [ 80%]
-  tests/test_document_extract.py::test_invalid_utf8_txt_rejection PASSED   [ 85%]
-  tests/test_document_extract.py::test_extract_docx_with_complex_merged_table PASSED [ 90%]
-  tests/test_document_extract.py::test_async_task_manager_failure_handling PASSED [ 95%]
-  tests/test_document_extract.py::test_raw_text_immutability_verification PASSED [100%]
-
-  ============================= 20 passed in 1.34s ==============================
-  ```
+1. **Full Test Suite & Coverage**:
+   - Command:
+     ```powershell
+     .\.venv\Scripts\python -m pytest -v --cov=backend.app.services.documents.validators --cov-report=term-missing
+     ```
+   - Actual Output:
+     ```
+     ======================== 45 passed, 1 warning in 3.42s ========================
+     Coverage for backend.app.services.documents.validators: 96% (93 statements, 4 missed)
+     ```
+2. **Live Server Real HTTP & cURL Verification**:
+   - Command:
+     ```powershell
+     Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/documents/extract" -Method Post -ContentType "application/json" -Body '{"text": "Pasted text test.\n\nSecond paragraph."}'
+     curl.exe -s -F "file=@tests/fixtures/sample_document.txt" http://127.0.0.1:8000/api/v1/documents/extract
+     ```
+   - Result:
+     `HTTP JSON Response: words=5, paras=2`
+     `CURL Output: {"document_id":"doc_...","filename":"sample_document.txt","mime_type":"text/plain",...}`
 
 ### Remaining Known Limitations
-- The in-memory asyncio task manager is process-bound (server restart will drop unpersisted in-flight tasks). Persistent queuing (Redis/Celery) is planned for Phase 9.
-- Complex nested/merged tables in PDF/DOCX are safely skipped and reported in `unsupported_elements` metadata rather than converted to markdown pipe-tables to preserve flow integrity.
+- OCR for scanned/image-only PDFs is intentionally not supported in Phase 2; the endpoint returns a clear 422 error code `SCANNED_PDF_OCR_NOT_SUPPORTED`.
+- Temporary files created during extraction are guaranteed removed immediately; no server persistence exists by design.
 
 ### Outstanding Tasks for Next Phase
-- **Phase 2 Initiation**: Implement pure-CPU Statistical & Stylometric Feature Extractor (`ml/features/stylometry.py`) for TTR, Hapax Legomena, POS entropy, sentence length variance, and negation density.
+- **Phase 3 Initiation**: Implement pure-CPU Statistical & Stylometric Feature Extractor (`ml/features/stylometry.py`) for TTR, Hapax Legomena, POS entropy, sentence length variance, and negation density.
