@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Writing Improver Workspace: Interactive Sentence Diffs, Verification Audit, and Undo/Redo Engine)
+
+#### Writing Improver Workspace (`frontend/src/`)
+- `frontend/src/app/humanizer/page.tsx`: Complete Writing Improver workspace page with dual-panel layout, dynamic mode selection across all 6 modes, real-time revision pipeline, jump-to-location smooth scrolling, and complete synchronization between sentence-level accept/reject decisions and the final manuscript.
+- `frontend/src/lib/diff.ts`: Word-level diff algorithm using Longest Common Subsequence (LCS) tokenize engine guaranteeing exact preservation of original whitespace, punctuation, citations, and formulas.
+- `frontend/src/components/improver/DiffView.tsx`: Dual-mode diff component supporting inline deletion/insertion (`<del>` / `<ins>`) and side-by-side comparison with syntax-highlighted diffs.
+- `frontend/src/components/improver/SentenceChangeCard.tsx`: Sentence-aligned diff review card featuring individual Accept/Reject controls, status indicators (`Accepted`, `Rejected (Original Kept)`, `Unchanged`), inline verification advisory badges (`Critical Audit Flag`, `Review Advisory`), and an explicit confirmation dialog (`Dialog`) required before accepting revisions flagged with CRITICAL/WARN findings.
+- `frontend/src/components/improver/VerificationPanel.tsx`: Audit breakdown grouped by category (Numbers, Citations, Entities, Structural Integrity, Semantic Drift) and severity (`CRITICAL`, `WARN`, `INFO`), jump-to-paragraph action buttons, heuristic disclaimer notice, and re-verification trigger.
+- `frontend/src/components/improver/ImproverForm.tsx`: Input form with character/word counter, 6 editorial mode cards with descriptive summaries, provider selector override (`groq`, `openrouter`, `openai`, `local_small`), verification checkbox toggle, stage progress bar, and cancellation support.
+- `frontend/src/components/improver/FinalTextEditor.tsx`: Editable final manuscript text editor serving as the source of truth for downstream export, complete with Accept All / Reject All actions, undo/redo history stack, copy-to-clipboard button, telemetry row displaying provider, model, tokens, and estimated cost, and a visibly disabled Download button with an explanatory tooltip (no fake download).
+
+#### Verification & Testing
+- `frontend/src/test/diff.test.ts`: 9 Vitest unit tests covering word tokenization, empty strings, insertions, deletions, substitutions, protected span tags, and text reconstruction.
+- `frontend/src/test/ImproverWorkspace.test.tsx`: 6 Vitest component tests verifying inline/split diff rendering, accept/reject toggling, flagged critical change confirmation modal, undo/redo state manipulation, manual editing, and disabled download tooltip.
+- `frontend/src/test/e2e-improver.spec.ts`: 16 Playwright E2E scenarios across Desktop Chrome and Mobile Chrome (Pixel 5) testing 6-mode rendering, word count updates, input validation, mode switching, verification toggling, mobile 375px layout usability, heuristic disclosure presence, and provider configuration against the live running server.
+- All 35 Vitest unit tests passing (14 test files); 16/16 Playwright Writing Improver tests passing; 14/14 Playwright Content Checker tests passing; `next lint` zero warnings or errors; production build 100% successful.
+
+
 ### Added - 2026-11-22 (Phase 9: Security Hardening, Rate Limiting & Phase 7: Task Dispatch Engine)
 
 #### Security Headers & Middleware
