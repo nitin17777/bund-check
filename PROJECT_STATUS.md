@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 8 (Foundation) — Premium Dark Design System, App Shell, Typed API Client & Landing Page  
-**Status**: Completed and Verified (17/17 Vitest UI Tests Passing, Next.js Build Passing, 100% Axe A11y on All Routes)
+**Current Phase**: Phase 8 (AI Checker Workspace) — Content Checker Workspace with Sentence Heatmap, Live API Extraction, Limitations Disclosure & Report Export  
+**Status**: Completed and Verified (14/14 Playwright E2E Tests Passing across Desktop & Mobile, 20/20 Vitest UI Tests Passing, Next.js Build Passing, Live Backend E2E Passing)
 
 ---
 
@@ -18,8 +18,107 @@
 | **Phase 5** | Provider-Agnostic Writing Improver Pipeline & Protected Spans (`/improve`) | **Completed** | 2026-11-22 |
 | **Phase 6** | Multi-Stage Post-Rewrite Verification Layer (`/verify`) | **Completed** | 2026-11-22 |
 | **Phase 7** | Task Manager, Async Polling & Status Queues | Pending | — |
-| **Phase 8** | Next.js Frontend — Review Dashboard & Interactive Diff View | In Progress (Foundation Done) | 2026-11-22 |
+| **Phase 8** | Next.js Frontend — AI Checker Workspace, Heatmap & Reports | **Completed** | 2026-11-22 |
 | **Phase 9** | Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
+
+---
+
+## Session Log: Phase 8 Implementation & Verification (AI Content Checker Workspace)
+
+### Completed Tasks
+1. **Live Content Checker Workspace Page (`frontend/src/app/checker/page.tsx`)**:
+   - Integrated dynamic toggle between the input workspace (`CheckerForm`) and analysis results view (`CheckerResults`).
+   - Maintains reset action to discard in-memory analysis and inspect new manuscripts.
+
+2. **Checker Form Component (`frontend/src/components/checker/CheckerForm.tsx`)**:
+   - Dual-tab interface: "Paste Text" with auto-expanding textarea and "Upload File" backed by `FileDropzone`.
+   - Real-time word counter with length warning advisory ($< 50$ words marked as short text with reduced statistical reliability).
+   - Real-time processing progress bar with stage telemetry: `extracting` (document normalization via `/api/v1/documents/extract`) and `analyzing` (calibrated detection via `/api/v1/check`).
+   - In-flight request cancellation using `AbortController`.
+   - Actionable error alert mapping for API and document validation failures:
+     - Scanned / image-only PDFs (`SCANNED_PDF_OCR_NOT_SUPPORTED`): "The uploaded PDF appears to be scanned or image-only with no extractable text layer. Please provide a searchable PDF, DOCX, or text file."
+     - Document size limit (`PAYLOAD_TOO_LARGE`): "The document exceeds the maximum permitted limit of 10 MB or 50,000 words."
+     - Empty text (`EMPTY_DOCUMENT_TEXT` / `EMPTY_INPUT_TEXT`): "Input text cannot be empty."
+     - Encrypted PDF (`ENCRYPTED_PDF_NOT_SUPPORTED`): "Password-protected or encrypted PDF files are not supported."
+     - Short text ($< 10$ words): Actionable client warning prior to submission.
+
+3. **Results Layout & Visual Heatmap (`frontend/src/components/checker/CheckerResults.tsx`, `SentenceHeatmap.tsx`)**:
+   - **Calibrated Label Badge**: Uses exact API wording (`likely human-leaning`, `inconclusive`, `likely AI-leaning`) and matching classification bands (`HUMAN_TYPICAL`, `INCONCLUSIVE`, `SYNTHETIC_INDICATIVE`).
+   - **Empirical Uncertainty Interval**: Displays 95% Confidence Interval ($[\text{lower}, \text{upper}]$) directly from the API.
+   - **Prominent Scientific Limitations Panel**: Displays model disclaimer, calibrated score explanation, limitations bullet list, model version (`1.0.0`), and SHA-256 model hash.
+   - **Document Statistics Grid**: Summarizes words, characters, paragraphs, sentences, and language identification.
+   - **Contributing Signals Card Grid**: Plain-language explanations of genuine model features (sentence length variability, type-token ratio, function word frequency, punctuation density, perplexity burstiness).
+   - **Interactive Sentence Heatmap**: Renders paragraphs with sentence spans highlighted based on character offsets from the API. Tested with Unicode characters (smart quotes, em-dashes, Greek symbols `α`, `β`, accented characters `café`, `naïve`) confirming 100% zero offset drift.
+   - **Sentence Detail Popover Drawer**: Displays sentence text, calibrated indicator score, and mandatory attribution disclaimer ("Local sentence indicators reflect local statistical uniformity and must not be used as standalone evidence of AI generation").
+   - **Score Range Filter**: Filters sentences across 4 tiers (`All Sentences`, `Elevated Synthetic`, `Inconclusive`, `Human-Typical`).
+
+4. **Report Export Calling `/api/v1/check/report`**:
+   - Triggers server-rendered HTML report and structured JSON export directly from the backend without client-side score computation.
+
+5. **Automated Verification & Zero-Mock Testing**:
+   - **Playwright E2E Suite (`frontend/src/test/e2e-checker.spec.ts`)**:
+     - 14/14 tests passed across Desktop Chrome and Mobile Chrome (Pixel 5).
+     - Scenario 1: Multi-paragraph Unicode text paste, character offset heatmap highlight, sentence popover inspection, filter tabs.
+     - Scenario 2: Download analysis report in HTML and JSON format.
+     - Scenario 3: Real `.txt` document upload and full analysis pipeline.
+     - Scenario 4: Real `.docx` document upload with heading & table extraction.
+     - Scenario 5: Real `.pdf` document upload with multi-page structure.
+     - Scenario 6: Uploading `scanned_image_only.pdf` triggering 422 `SCANNED_PDF_OCR_NOT_SUPPORTED` with actionable alert.
+     - Scenario 7: Empty and short text error validation.
+   - **Live Backend Integration Suite (`frontend/src/test/e2e-live-backend.mjs`)**:
+     - Executed against live FastAPI server (`http://127.0.0.1:8000`).
+     - Verified health check, document extraction, Unicode offset round-trip, calibrated check endpoint, HTML/JSON report downloads, and error responses.
+   - **Vitest Unit Suite (`npm test`)**: 12 test files passed, 20/20 unit tests passed.
+   - **Next.js Production Build (`npm run build`)**: 9/9 pages compiled and statically optimized with 0 errors.
+   - **ESLint (`npm run lint`)**: 0 warnings, 0 errors.
+
+### Test Execution Commands & Actual Raw Results
+```bash
+# Playwright End-to-End Suite against Live Backend
+cd frontend && npx playwright test
+```
+```
+Running 14 tests using 1 worker
+
+  ok  1 [Desktop Chrome] › src\test\e2e-checker.spec.ts:7:3 › Scenario 1: Paste multi-paragraph text with Unicode & verify heatmap offsets and popover (657ms)
+  ok  2 [Desktop Chrome] › src\test\e2e-checker.spec.ts:68:3 › Scenario 2: Download analysis report in HTML and JSON format (420ms)
+  ok  3 [Desktop Chrome] › src\test\e2e-checker.spec.ts:92:3 › Scenario 3: Upload real TXT document fixture (343ms)
+  ok  4 [Desktop Chrome] › src\test\e2e-checker.spec.ts:110:3 › Scenario 4: Upload real DOCX document fixture (319ms)
+  ok  5 [Desktop Chrome] › src\test\e2e-checker.spec.ts:123:3 › Scenario 5: Upload real PDF document fixture (492ms)
+  ok  6 [Desktop Chrome] › src\test\e2e-checker.spec.ts:136:3 › Scenario 6: Trigger Scanned PDF error state (400ms)
+  ok  7 [Desktop Chrome] › src\test\e2e-checker.spec.ts:154:3 › Scenario 7: Trigger empty and short text error states (262ms)
+  ok  8 [Mobile Chrome] › src\test\e2e-checker.spec.ts:7:3 › Scenario 1: Paste multi-paragraph text with Unicode & verify heatmap offsets and popover (610ms)
+  ok  9 [Mobile Chrome] › src\test\e2e-checker.spec.ts:68:3 › Scenario 2: Download analysis report in HTML and JSON format (376ms)
+  ok 10 [Mobile Chrome] › src\test\e2e-checker.spec.ts:92:3 › Scenario 3: Upload real TXT document fixture (383ms)
+  ok 11 [Mobile Chrome] › src\test\e2e-checker.spec.ts:110:3 › Scenario 4: Upload real DOCX document fixture (345ms)
+  ok 12 [Mobile Chrome] › src\test\e2e-checker.spec.ts:123:3 › Scenario 5: Upload real PDF document fixture (483ms)
+  ok 13 [Mobile Chrome] › src\test\e2e-checker.spec.ts:136:3 › Scenario 6: Trigger Scanned PDF error state (447ms)
+  ok 14 [Mobile Chrome] › src\test\e2e-checker.spec.ts:154:3 › Scenario 7: Trigger empty and short text error states (248ms)
+
+  14 passed (7.2s)
+```
+```bash
+# Vitest Component & Unit Tests
+cd frontend && npm test
+```
+```
+ Test Files  12 passed (12)
+      Tests  20 passed (20)
+   Start at  01:54:08
+   Duration  7.93s
+```
+```bash
+# Production Next.js Build
+cd frontend && npm run build
+```
+```
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+ ✓ Generating static pages (9/9)
+   Finalizing page optimization ...
+   Collecting build traces ...
+```
 
 ---
 

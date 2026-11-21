@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 8: Live AI Content Checker Workspace, Heatmap & Reports)
+
+#### Checker Workspace & Heatmap (`frontend/src/`)
+- `frontend/src/app/checker/page.tsx`: Workspace page integrating live document extraction, multi-signal check submission, dynamic stage progress, and analysis results view.
+- `frontend/src/components/checker/CheckerForm.tsx`: Input form supporting paste text and drag-and-drop file upload (`.pdf`, `.docx`, `.txt`), real-time word counter with $<50$ word warning, multi-stage progress indicator (`extracting` $\to$ `analyzing`), cancel support via `AbortController`, and actionable error alerts for scanned PDFs (`SCANNED_PDF_OCR_NOT_SUPPORTED`), file size limits, short text, and empty submissions.
+- `frontend/src/components/checker/CheckerResults.tsx`: Assessment banner displaying calibrated label (`likely human-leaning`, `inconclusive`, `likely AI-leaning`), empirical 95% uncertainty interval, prominent scientific limitations panel, document statistics, contributing signals cards, and report download triggers.
+- `frontend/src/components/checker/SentenceHeatmap.tsx`: Heatmap highlighting sentences using exact API character offsets without drift on multi-paragraph Unicode manuscripts, sentence detail inspector drawer displaying local synthetic indicator and attribution disclaimer, and score range filter tabs (`All Sentences`, `Elevated Synthetic`, `Inconclusive`, `Human-Typical`).
+
+#### Report Generation
+- Integrated `/api/v1/check/report` to export standalone HTML and structured JSON reports containing full audit metadata, model version (`1.0.0`), and SHA-256 model hash.
+
+#### Testing & Verification
+- `frontend/playwright.config.ts` & `frontend/src/test/e2e-checker.spec.ts`: Full Playwright E2E suite covering 14 scenarios across Desktop Chrome and Mobile Chrome (Pixel 5) against the live backend (text paste, Unicode offset alignment, popover inspection, report downloads, file uploads for `.txt`, `.docx`, `.pdf`, scanned PDF 422 error, short text validation).
+- `frontend/src/test/e2e-live-backend.mjs`: Standalone live backend verification script testing Unicode round-trip, extraction, check analysis, report export, and error codes.
+- `frontend/src/test/CheckerResults.test.tsx` & `frontend/src/test/SentenceHeatmap.test.tsx`: Vitest component tests verifying calibrated label rendering, popover inspection, and tab filtering.
+- Re-verified `next lint` (0 warnings, 0 errors) and `next build` (all 9 routes compiled and statically optimized).
+
 ### Added - 2026-11-22 (Phase 8: Frontend Design System, App Shell & Landing Page Foundation)
 
 #### Design System & Tokens
