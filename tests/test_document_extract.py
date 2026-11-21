@@ -27,7 +27,7 @@ import io
 import zipfile
 import pytest
 import docx
-import fitz
+import pymupdf as fitz
 
 from backend.services.parser.normalizer import (
     normalize_text,
@@ -273,3 +273,127 @@ async def test_async_task_manager_flow():
     assert completed_record.status == TaskStatus.COMPLETED
     assert completed_record.progress == 1.0
     assert completed_record.result == {"sum": 42}
+
+
+# ==============================================================================
+# 5. Security & Edge Case Tests (Phase 1 Final Verification)
+# ==============================================================================
+
+def test_docx_excessive_zip_entries_rejection():
+    # Build a ZIP archive exceeding DEFAULT_MAX_ZIP_ENTRIES (e.g. 1005 entries)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        z.writestr("word/document.xml", "<w:document></w:document>")
+        z.writestr("[Content_Types].xml", "<Types></Types>")
+        for i in range(1005):
+            z.writestr(f"word/media/image_{i}.txt", "dummy")
+    buf.seek(0)
+    overflow_bytes = buf.getvalue()
+
+    with pytest.raises(SecurityValidationError, match="excessive entries"):
+        validate_docx_structure(overflow_bytes, max_entries=1000)
+
+
+def test_docx_missing_required_openxml_structures():
+    # Valid ZIP but missing both word/document.xml and [Content_Types].xml
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("some_folder/dummy.txt", "not a docx")
+    buf.seek(0)
+    fake_zip = buf.getvalue()
+
+    with pytest.raises(SecurityValidationError, match="Missing standard OpenXML document"):
+        validate_docx_structure(fake_zip)
+
+
+def test_docx_corrupted_zip_archive():
+    # Magic bytes PK\x03\x04 followed by corrupted garbage bytes
+    corrupt_docx = b"PK\x03\x04\x00\x00\x00\x00corrupted_bytes_here"
+    with pytest.raises(SecurityValidationError, match="Corrupted or invalid DOCX archive"):
+        validate_docx_structure(corrupt_docx)
+
+
+def test_invalid_utf8_txt_rejection():
+    # Sequence with invalid continuation bytes (non-UTF8)
+    invalid_utf8_bytes = b"Valid ASCII header \x80\x81\xFF tail"
+    with pytest.raises(SecurityValidationError, match="Unsupported file format or invalid character encoding"):
+        validate_and_detect_document(invalid_utf8_bytes)
+
+
+def test_extract_docx_with_complex_merged_table():
+    # Create DOCX with an irregular table (simulating merged cells where column counts differ)
+    doc = docx.Document()
+    doc.add_paragraph("Leading paragraph before complex table.")
+    
+    # Create a table and simulate an irregular row
+    tbl = doc.add_table(rows=2, cols=3)
+    tbl.cell(0, 0).text = "A"
+    tbl.cell(0, 1).text = "B"
+    tbl.cell(0, 2).text = "C"
+    
+    # Merge cells in the second row to make it irregular
+    cell_a = tbl.cell(1, 0)
+    cell_b = tbl.cell(1, 1)
+    cell_a.merge(cell_b)
+    cell_a.text = "Merged AB"
+    tbl.cell(1, 2).text = "C2"
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    docx_bytes = buf.getvalue()
+
+    parser = DocumentParser()
+    result = parser.parse_bytes(docx_bytes, filename="complex_table.docx")
+
+    # The leading paragraph must be parsed
+    assert result.paragraph_count >= 1
+    assert "Leading paragraph" in result.paragraphs[0].normalized_text
+    
+    # Complex/merged tables must be cataloged in unsupported_elements metadata
+    assert len(result.unsupported_elements) >= 1
+    complex_table_element = result.unsupported_elements[0]
+    assert complex_table_element.type == "complex_table"
+    assert complex_table_element.action_taken == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_async_task_manager_failure_handling():
+    manager = InMemoryTaskManager()
+
+    async def failing_job():
+        raise RuntimeError("Simulated processing error in extractor pipeline.")
+
+    task_id = await manager.enqueue(failing_job)
+    assert task_id.startswith("task_")
+
+    import asyncio
+    await asyncio.sleep(0.05)
+
+    record = manager.get_task(task_id)
+    assert record is not None
+    assert record.status == TaskStatus.FAILED
+    assert "Simulated processing error" in str(record.error)
+    assert record.completed_at is not None
+
+
+def test_raw_text_immutability_verification():
+    # Verify that raw_text stored in ParagraphModel remains 100% byte-for-byte identical
+    # to original input even when normalized_text is heavily modified (ligatures, hyphens, Unicode)
+    parser = DocumentParser()
+    original_raw = "The \ufb01rst un-\r\nfolded con\ufb02ict with math: \u0394E = mc\u00b2."
+    result = parser.parse_bytes(original_raw.encode("utf-8"), filename="raw_test.txt")
+
+    assert len(result.paragraphs) == 1
+    para = result.paragraphs[0]
+    
+    # raw_text MUST contain exact original ligatures and line breaks
+    assert para.raw_text == original_raw
+    assert "\ufb01" in para.raw_text
+    assert "\ufb02" in para.raw_text
+    assert "un-\r\nfolded" in para.raw_text
+    
+    # normalized_text MUST be normalized cleanly
+    assert "first" in para.normalized_text
+    assert "unfolded" in para.normalized_text
+    assert "conflict" in para.normalized_text
+    assert "ΔE = mc²" in para.normalized_text

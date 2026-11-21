@@ -14,7 +14,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 import docx
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 from backend.services.parser.normalizer import normalize_text, segment_sentences
 from backend.services.parser.security import (
@@ -208,9 +208,22 @@ class DocumentParser:
 
                 # Check for merged cells or unsupported nesting
                 try:
+                    # Detect merged cells by checking for duplicate cell proxies across a row or column
                     for row in tbl.rows:
-                        row_cells = [cell.text.strip() for cell in row.cells]
-                        matrix.append(row_cells)
+                        seen_cells = set()
+                        for cell in row.cells:
+                            if cell._tc in seen_cells:
+                                is_supported = False
+                                skip_reason = "Merged table cells detected"
+                                break
+                            seen_cells.add(cell._tc)
+                        if not is_supported:
+                            break
+
+                    if is_supported:
+                        for row in tbl.rows:
+                            row_cells = [cell.text.strip() for cell in row.cells]
+                            matrix.append(row_cells)
                 except Exception as e:
                     is_supported = False
                     skip_reason = f"Corrupted table grid: {str(e)}"

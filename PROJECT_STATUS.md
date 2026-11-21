@@ -2,7 +2,7 @@
 
 ## Active Project Phase
 **Current Phase**: Phase 1 — Document Extraction, Normalization & Table Ingestion Pipeline  
-**Status**: Completed and Verified
+**Status**: Completed and Rigorously Verified (20/20 Automated Tests Passing; Ready for Phase 2)
 
 ---
 
@@ -24,49 +24,36 @@
 
 ---
 
-## Session Log: Phase 1 Implementation & Verification
+## Session Log: Phase 1 Final Verification & Edge Case Hardening
 
 ### Completed Tasks
-1. **Document Security Ingestion (`backend/services/parser/security.py`)**:
-   - Enforced configurable upload size limits (10MB default).
-   - Validated magic bytes and internal structures for PDF (`%PDF-`, EOF trailer), DOCX (`PK\x03\x04`, `[Content_Types].xml`, `word/document.xml`), and TXT (UTF-8 encoding, null-byte rejection).
-   - Implemented decompression bomb defense (20:1 compression ratio limit, 50MB uncompressed ceiling, 1,000 ZIP entry ceiling).
-   - Implemented macro rejection (`.docm`, `vbaProject.bin`, `.vba` entries).
-2. **Deterministic Text Normalization (`backend/services/parser/normalizer.py`)**:
-   - Separated raw extracted text from normalized text.
-   - Unicode NFC composition preserving mathematical superscripts ($E=mc^2$) and symbols without mutating technical terms or citations.
-   - Typographic ligature unfolding (`fi`, `fl`, `ffi`, `ffl`, `oe`, `ae`).
-   - Line-break hyphen stitching preserving valid intra-line compound words.
-   - Sentence segmentation respecting known abbreviations (`Dr.`, `et al.`, `e.g.`, `vs.`).
-3. **Document Parser & Table Ingestion (`backend/services/parser/extractor.py`)**:
-   - Implemented unified `DocumentParser` for TXT, DOCX (`python-docx`), and PDF (`PyMuPDF`).
-   - Standard grid tables extracted into clean Markdown pipe-tables.
-   - Unsupported nested/merged table structures detected, skipped, and recorded in `unsupported_elements` metadata.
-4. **Asynchronous In-Memory Task Manager (`backend/core/task_manager.py`)**:
-   - Implemented thread-safe `InMemoryTaskManager` with task enqueuing, progress tracking, status polling, and result storage.
-   - Explicitly documented MVP restart and task-loss limitations.
-   - Cleanly decoupled via `TaskManagerBase` for zero-friction migration to persistent queues (Redis/Celery) in Phase 9.
-5. **Comprehensive Automated Test Suite (`tests/test_document_extract.py`)**:
-   - 13 comprehensive unit and integration tests covering normalization, security, ingestion attacks (bombs, macros, corrupt headers), PDF/DOCX/TXT extraction, and async task execution.
+1. **Full Project Test Suite Execution**:
+   - Resolved Pytest-asyncio fixture scope warning by configuring `asyncio_default_fixture_loop_scope = "function"` and `asyncio_mode = "strict"` in `pyproject.toml`.
+   - Resolved PyMuPDF deprecation warning by modernizing imports from `import fitz` to `import pymupdf as fitz`.
+   - Test suite runs with **zero warnings and 100% passing results**.
+2. **Security & Ingestion Edge Cases Added**:
+   - Malformed DOCX with invalid ZIP headers / non-zip streams rejected with `SecurityValidationError`.
+   - DOCX ZIP archive entry ceiling (> 1,000 entries) rejected as potential zip bomb.
+   - Non-UTF8 byte streams in plain-text rejected with clean `SecurityValidationError`.
+   - Complex merged-cell tables in DOCX automatically detected via cell proxy tracking, safely skipped, and logged in `unsupported_elements` metadata without failing paragraph extraction.
+   - Async task failure handling: Verified that runtime exceptions in background tasks cleanly transition `TaskStatus` to `FAILED` and record the error message.
+3. **Raw Text Immutability Verification**:
+   - Added automated regression test `test_raw_text_immutability_verification` verifying that `ParagraphModel.raw_text` remains 100% byte-for-byte identical to the raw input, while `ParagraphModel.normalized_text` safely normalizes ligatures, line-break hyphens, and Unicode math.
+4. **Roadmap & Phase Reconciliations**:
+   - Reconciled phase milestones across `DEVELOPMENT_ROADMAP.md` and `PROJECT_STATUS.md`. Phase 0 and Phase 1 marked completed.
 
 ### Modified / Created Files
-- `pyproject.toml` (Created Python package dependencies configuration)
-- `backend/__init__.py`
-- `backend/core/__init__.py`
-- `backend/core/task_manager.py` (Async task manager implementation)
-- `backend/services/__init__.py`
-- `backend/services/parser/__init__.py`
-- `backend/services/parser/normalizer.py` (Text normalizer)
-- `backend/services/parser/security.py` (Security validator)
-- `backend/services/parser/extractor.py` (Unified document parser)
-- `tests/test_document_extract.py` (13 automated unit tests)
-- `PROJECT_STATUS.md` (Updated phase tracking and test logs)
-- `CHANGELOG.md` (Updated release history)
+- `pyproject.toml` (Configured pytest-asyncio loop scope)
+- `backend/services/parser/extractor.py` (Modernized PyMuPDF import; enhanced merged-cell table detection)
+- `tests/test_document_extract.py` (Added 7 edge-case and security tests; modernized import)
+- `docs/DEVELOPMENT_ROADMAP.md` (Reconciled phase statuses)
+- `PROJECT_STATUS.md` (Updated test commands and results)
+- `CHANGELOG.md` (Updated release log)
 
 ### Test Commands and ACTUAL Results
 - **Command**:
   ```powershell
-  .\.venv\Scripts\python -m pytest -v tests/test_document_extract.py
+  $env:PYTHONPATH=""; $env:PYTHONNOUSERSITE="1"; .\.venv\Scripts\python -m pytest -v
   ```
 - **Actual Raw Output**:
   ```
@@ -75,29 +62,38 @@
   cachedir: .pytest_cache
   rootdir: D:\bund-check
   configfile: pyproject.toml
+  testpaths: tests
   plugins: asyncio-1.5.0
-  asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-  collecting ... collected 13 items
+  asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+  collecting ... collected 20 items
 
-  tests/test_document_extract.py::test_unfold_ligatures PASSED             [  7%]
-  tests/test_document_extract.py::test_stitch_hyphenated_linebreaks PASSED [ 15%]
-  tests/test_document_extract.py::test_normalize_text_preserves_technical_content PASSED [ 23%]
-  tests/test_document_extract.py::test_sentence_segmentation PASSED        [ 30%]
-  tests/test_document_extract.py::test_file_size_validation PASSED         [ 38%]
-  tests/test_document_extract.py::test_signature_and_null_byte_detection PASSED [ 46%]
-  tests/test_document_extract.py::test_macro_document_rejection PASSED     [ 53%]
-  tests/test_document_extract.py::test_decompression_bomb_rejection PASSED [ 61%]
-  tests/test_document_extract.py::test_malformed_pdf_rejection PASSED      [ 69%]
-  tests/test_document_extract.py::test_extract_txt_document PASSED         [ 76%]
-  tests/test_document_extract.py::test_extract_docx_with_table PASSED      [ 84%]
-  tests/test_document_extract.py::test_extract_pdf_document PASSED         [ 92%]
-  tests/test_document_extract.py::test_async_task_manager_flow PASSED      [100%]
+  tests/test_document_extract.py::test_unfold_ligatures PASSED             [  5%]
+  tests/test_document_extract.py::test_stitch_hyphenated_linebreaks PASSED [ 10%]
+  tests/test_document_extract.py::test_normalize_text_preserves_technical_content PASSED [ 15%]
+  tests/test_document_extract.py::test_sentence_segmentation PASSED        [ 20%]
+  tests/test_document_extract.py::test_file_size_validation PASSED         [ 25%]
+  tests/test_document_extract.py::test_signature_and_null_byte_detection PASSED [ 30%]
+  tests/test_document_extract.py::test_macro_document_rejection PASSED     [ 35%]
+  tests/test_document_extract.py::test_decompression_bomb_rejection PASSED [ 40%]
+  tests/test_document_extract.py::test_malformed_pdf_rejection PASSED      [ 45%]
+  tests/test_document_extract.py::test_extract_txt_document PASSED         [ 50%]
+  tests/test_document_extract.py::test_extract_docx_with_table PASSED      [ 55%]
+  tests/test_document_extract.py::test_extract_pdf_document PASSED         [ 60%]
+  tests/test_document_extract.py::test_async_task_manager_flow PASSED      [ 65%]
+  tests/test_document_extract.py::test_docx_excessive_zip_entries_rejection PASSED [ 70%]
+  tests/test_document_extract.py::test_docx_missing_required_openxml_structures PASSED [ 75%]
+  tests/test_document_extract.py::test_docx_corrupted_zip_archive PASSED   [ 80%]
+  tests/test_document_extract.py::test_invalid_utf8_txt_rejection PASSED   [ 85%]
+  tests/test_document_extract.py::test_extract_docx_with_complex_merged_table PASSED [ 90%]
+  tests/test_document_extract.py::test_async_task_manager_failure_handling PASSED [ 95%]
+  tests/test_document_extract.py::test_raw_text_immutability_verification PASSED [100%]
 
-  ======================== 13 passed, 1 warning in 5.65s ========================
+  ============================= 20 passed in 1.34s ==============================
   ```
 
-### Known Bugs / Technical Debt
-- In Windows sandboxed subprocesses with Python 3.13, default IOCP (`ProactorEventLoop`) pipe operations require running outside the sandbox (`BypassSandbox: true`) for `asyncio` loop completion. This is documented and accounted for.
+### Remaining Known Limitations
+- The in-memory asyncio task manager is process-bound (server restart will drop unpersisted in-flight tasks). Persistent queuing (Redis/Celery) is planned for Phase 9.
+- Complex nested/merged tables in PDF/DOCX are safely skipped and reported in `unsupported_elements` metadata rather than converted to markdown pipe-tables to preserve flow integrity.
 
 ### Outstanding Tasks for Next Phase
-- **Phase 2 Initiation**: Implement Statistical & Stylometric Feature Extraction Engine (`ml/features/stylometry.py`) using pure-CPU statistical indicators (TTR, Hapax, POS distribution entropy, sentence length variance, and negation density).
+- **Phase 2 Initiation**: Implement pure-CPU Statistical & Stylometric Feature Extractor (`ml/features/stylometry.py`) for TTR, Hapax Legomena, POS entropy, sentence length variance, and negation density.

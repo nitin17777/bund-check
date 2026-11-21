@@ -42,12 +42,12 @@ Phase 10: Docker Deployment, Benchmarking & Documentation Finalization
 
 ### Phase Breakdown
 
-#### Phase 0: Scaffolding, Architecture, Specs & Environment Setup (ACTIVE)
+#### Phase 0: Scaffolding, Architecture, Specs & Environment Setup (COMPLETED)
 - **Goal**: Establish project directory topology, mandatory contributor protocols (`AGENTS.md`, `GEMINI.md`), architectural documentation, API specifications, and initial git repository.
 - **Dependencies**: None.
 - **Deliverables**: All foundational Markdown specifications, `.gitignore`, initial git commit. No application code.
 
-#### Phase 1: Document Extraction, Normalization & Table Ingestion Pipeline
+#### Phase 1: Document Extraction, Normalization & Table Ingestion Pipeline (COMPLETED)
 - **Goal**: Implement robust, secure text and table ingestion for PDF, DOCX, and TXT files.
 - **Dependencies**: Phase 0.
 - **Components**: `backend/services/parser/`, PyMuPDF (`fitz`), `python-docx`, character normalizer (`unicodedata` NFKD, ligature unfolding, hyphen stitching), Markdown pipe-table extractor, and skipped elements logger.
