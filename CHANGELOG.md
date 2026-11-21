@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 5: Writing Improver Pipeline & Protected Span Preservation)
+- `backend/app/services/improver/providers/base.py`: Abstract `LLMProvider` interface defining standardized text generation with token and cost tracking.
+- `backend/app/services/improver/providers/hosted.py`: Hosted provider implementation supporting Groq, OpenRouter, and OpenAI with secure key validation, error propagation, and pricing models.
+- `backend/app/services/improver/providers/local.py`: Local small model provider for open-weight models (Qwen2.5-1.5B) with documented hardware constraints for 4GB VRAM and CPU fallback.
+- `backend/app/services/improver/providers/factory.py`: Provider factory ensuring only genuine providers are instantiated in production.
+- `backend/app/services/improver/protected_spans.py`: Protected span engine masking and unmasking citations, numbers, units, dates, DOIs, URLs, and code blocks, aborting with `PROTECTED_SPAN_DROPPED` if placeholders are dropped.
+- `backend/app/services/improver/chunking.py`: Paragraph chunker preserving document ordering, heading structures, and brief preceding sentence contexts.
+- `backend/app/services/improver/prompts.py`: Mode-specific prompt templates for all six approved modes (natural/conversational, academic clarity, professional, simple/readable, concise, formal) forbidding fact addition or terminology changes.
+- `backend/app/services/improver/pipeline.py`: Improver coordination pipeline with backoff retries, sentence-level alignment for accept/reject review, and cost accounting.
+- `backend/app/api/v1/endpoints/improve.py`: FastAPI endpoint `POST /api/v1/improve` with payload limits and privacy-preserving logging.
+- `backend/app/models/improver.py`: Pydantic data models for improve requests, paragraph revisions, sentence changes, and usage accounting.
+- `tests/test_phase5_improver.py`: 8 unit and integration tests verifying span masking, dropped span aborts, mode prompt divergence, heading preservation, pipeline execution via `FakeTestProvider`, missing key errors, and conditionally skipped live API tests.
+
 ### Added - 2026-11-22 (Phase 4: Backend Detector Integration & Content Check API)
 - `backend/app/services/detection/loader.py`: Lazy, memory-safe singleton model registry loading the calibrated GBDT ensemble artifact (`gbdt_calibrated_ensemble.joblib`) on CPU by default with GPU-readiness for 4GB RTX 2050.
 - `backend/app/services/detection/detector.py`: Core detection engine reusing feature extractors directly from `ml/`, applying Isotonic calibration, enforcing the 0.40–0.60 abstain band, computing empirical 95% uncertainty intervals, extracting top contributing signals with plain-language explanations, generating honest sentence-level indicators, and enforcing short-text length gating (<50 and <150 words).

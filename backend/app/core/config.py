@@ -33,5 +33,19 @@ class Settings(BaseSettings):
     MIN_WORD_COUNT_RELIABLE: int = 150
     MIN_WORD_COUNT_EVALUATE: int = 50
 
+    # Improver & LLM Provider Settings
+    DEFAULT_IMPROVER_PROVIDER: str = "groq"  # "groq", "openrouter", "openai", "local_small"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    LOCAL_SMALL_MODEL: str = "Qwen/Qwen2.5-1.5B-Instruct"
+    LOCAL_SMALL_DEVICE: str = "cpu"  # CPU safe, or quantized 4-bit if cuda
+    IMPROVER_TIMEOUT_SECONDS: float = 45.0
+    IMPROVER_MAX_RETRIES: int = 2
+    MAX_IMPROVE_WORD_COUNT: int = 10000
+
 
 settings = Settings()
