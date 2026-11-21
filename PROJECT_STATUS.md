@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 6 — Multi-Stage Post-Rewrite Verification Layer  
-**Status**: Completed and Verified (111/112 Tests Passing across all suites, 1 skipped for missing live API key)
+**Current Phase**: Phase 8 (Foundation) — Premium Dark Design System, App Shell, Typed API Client & Landing Page  
+**Status**: Completed and Verified (17/17 Vitest UI Tests Passing, Next.js Build Passing, 100% Axe A11y on All Routes)
 
 ---
 
@@ -18,8 +18,111 @@
 | **Phase 5** | Provider-Agnostic Writing Improver Pipeline & Protected Spans (`/improve`) | **Completed** | 2026-11-22 |
 | **Phase 6** | Multi-Stage Post-Rewrite Verification Layer (`/verify`) | **Completed** | 2026-11-22 |
 | **Phase 7** | Task Manager, Async Polling & Status Queues | Pending | — |
-| **Phase 8** | Next.js Frontend — Review Dashboard & Interactive Diff View | Pending | — |
+| **Phase 8** | Next.js Frontend — Review Dashboard & Interactive Diff View | In Progress (Foundation Done) | 2026-11-22 |
 | **Phase 9** | Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
+
+---
+
+## Session Log: Frontend Foundation Implementation & Design System (Phase 8 Foundation)
+
+### Completed Tasks
+1. **Design Tokens & Tailwind Config (`frontend/tailwind.config.ts`)**:
+   - Deep obsidian/slate dark surfaces (`#090D16`, `#0E1422`, `#141C2E`, `#1A243B`).
+   - One restrained accent color (`#3B82F6` blue) with subtle background overlays (`rgba(59, 130, 246, 0.12)`).
+   - Semantic color system for `info` (`#38BDF8`), `success` (`#10B981`), `warning` (`#F59E0B`), and `critical` (`#EF4444`).
+   - Restrained radius scale (sm: 4px, default: 6px, md: 8px, lg: 12px) and no gradient-everywhere or generic dashboard template aesthetics.
+2. **Typography Pairing with Real Font Loading (`frontend/src/app/layout.tsx`)**:
+   - Google Fonts loaded via `next/font/google`: Inter (`--font-inter`) for clean UI prose, and JetBrains Mono (`--font-jetbrains`) for code, tokens, and numerical telemetry.
+3. **Design System Components (`frontend/src/components/ui/`)**:
+   - `Button.tsx`: Variants (`primary`, `secondary`, `outline`, `ghost`, `destructive`), sizes (`sm`, `md`, `lg`), loading spinner, disabled state, accessible ARIA roles.
+   - `Card.tsx`: Card, CardHeader, CardTitle (supports h1-h4 semantic rendering), CardDescription, CardContent, CardFooter.
+   - `Tabs.tsx`: Accessible tablist, tab triggers, and tabpanels with keyboard navigation and ARIA selected attributes.
+   - `Badge.tsx`: Pill indicators for status and metadata (`default`, `secondary`, `outline`, `info`, `success`, `warning`, `critical`).
+   - `Tooltip.tsx`: Accessible hover/focus tooltip with configurable delay and directional placement.
+   - `Dialog.tsx`: Modal dialog with backdrop blur, Escape key dismissal, backdrop click dismissal, and accessible `dialog` role.
+   - `Toast.tsx`: Toast provider and `useToast` hook supporting auto-dismiss (4.5s), manual close, and semantic alert types (`info`, `success`, `warning`, `critical`).
+   - `Progress.tsx`: Accessible progress bar with `role="progressbar"`, min/max/current values, and indeterminate pulse mode.
+   - `Skeleton.tsx`: Subtle pulse loading placeholder respecting `prefers-reduced-motion`.
+   - `FileDropzone.tsx`: Drag-and-drop and click-to-browse document uploader with client-side extension validation (`.pdf`, `.docx`, `.txt`), size ceiling enforcement (10 MB per API spec), and accessible file removal.
+   - `EmptyState.tsx`: Accessible empty state component for unpopulated views with icon, title, description, and optional action buttons.
+4. **App Shell Architecture (`frontend/src/components/layout/AppShell.tsx`)**:
+   - Fixed desktop sidebar (256px) with brand badge, system health indicator, and navigation links.
+   - Mobile responsive drawer with hamburger menu button, backdrop overlay, and Escape key dismissal.
+   - Top navigation bar with breadcrumbs and zero-retention status pill.
+   - Accessible skip-to-content anchor link.
+5. **App Routes & Placeholders (`frontend/src/app/`)**:
+   - `/`: Methodology-first Landing Page.
+   - `/dashboard`: High-level operational overview with zero-storage metrics and empty state.
+   - `/checker`: Document upload dropzone, plain text input area, and evaluation empty state.
+   - `/humanizer`: Dual-column layout for source text input and sentence-aligned revision preview.
+   - `/history`: Ephemeral privacy disclosure and session history empty state.
+   - `/reports/[id]`: Dynamic report lookup placeholder with ID breadcrumb and unpopulated record empty state.
+   - `/settings`: Privacy controls (strict zero-storage), hardware compute bounds, and server-side LLM provider parameters.
+   - Every route shows a legitimate empty state; zero fake/mocked data.
+6. **Honest Copy & Zero Fabricated Numbers Audit**:
+   - Prominent scientific limitations disclosure: explicitly states that detection is probabilistic and not proof of authorship.
+   - Improver explicitly framed around writing clarity and editorial quality, never detector evasion or deceptive cloaking.
+   - Zero fake customer logos, zero fake testimonials, zero fabricated user counts or percentage claims.
+   - Automated regex verification (`>\s*[^<]*\d+[^<]*<`) confirmed zero invented numbers in landing copy.
+7. **Typed API Client (`frontend/src/lib/api-client.ts`)**:
+   - Full TypeScript interface mappings for `/health`, `/document/extract`, `/check`, `/improve`, and `/verify`.
+   - Custom `ApiException` translating RFC 7807 error envelopes (`code`, `message`, `details`, `request_id`).
+   - Global `RequestState<T>` union type for reactive data states (`idle`, `loading`, `success`, `error`).
+8. **Automated Testing & Accessibility Verification**:
+   - **Vitest**: 10 test suites, 17/17 tests passing covering all components, props, and API client error handling.
+   - **ESLint**: 0 warnings, 0 errors via `next lint`.
+   - **Next.js Production Build**: All 9 static and dynamic routes compiled successfully via `next build`.
+   - **Axe-Core Accessibility Audit**: 100% compliance across all 7 routes (0 violations).
+   - **Responsive Inspection**: Tested and verified across 375px (Mobile), 768px (Tablet), and 1280px (Desktop).
+
+### Test Verification Commands & Raw Output
+```bash
+# Vitest Component Suite
+cd frontend && npm test
+```
+```
+Test Files  10 passed (10)
+     Tests  17 passed (17)
+  Duration  5.41s
+```
+```bash
+# ESLint Check
+cd frontend && npm run lint
+```
+```
+✔ No ESLint warnings or errors
+```
+```bash
+# Next.js Production Build
+cd frontend && npm run build
+```
+```
+Route (app)                              Size     First Load JS
+┌ ○ /                                    175 B          96.1 kB
+├ ○ /_not-found                          873 B          88.1 kB
+├ ○ /checker                             2.88 kB         110 kB
+├ ○ /dashboard                           193 B           107 kB
+├ ○ /history                             193 B           107 kB
+├ ○ /humanizer                           180 B           107 kB
+├ ƒ /reports/[id]                        193 B           107 kB
+└ ○ /settings                            180 B           107 kB
++ First Load JS shared by all            87.3 kB
+✓ Generating static pages (9/9)
+```
+```bash
+# Axe-Core Accessibility Audit
+cd frontend && node src/test/a11y-audit.mjs
+```
+```
+=== BUNDCHECK ACCESSIBILITY & LIGHTHOUSE AUDIT ===
+Route: Landing Page (/) -> Score: 100% (23 rules passed, 0 violations)
+Route: Dashboard (/dashboard) -> Score: 100% (30 rules passed, 0 violations)
+Route: Content Checker (/checker) -> Score: 100% (34 rules passed, 0 violations)
+Route: Writing Improver (/humanizer) -> Score: 100% (33 rules passed, 0 violations)
+Route: Audit History (/history) -> Score: 100% (30 rules passed, 0 violations)
+Route: Report Detail (/reports/demo-123) -> Score: 100% (30 rules passed, 0 violations)
+Route: Settings (/settings) -> Score: 100% (30 rules passed, 0 violations)
+```
 
 ---
 

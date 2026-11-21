@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 8: Frontend Design System, App Shell & Landing Page Foundation)
+
+#### Design System & Tokens
+- `frontend/tailwind.config.ts`: Custom deep obsidian surface tokens (`#090D16`, `#0E1422`, `#141C2E`, `#1A243B`), restrained accent color (`#3B82F6`), semantic palette (`info`, `success`, `warning`, `critical`), and strict border radius scale.
+- `frontend/src/app/globals.css`: Dark mode variables, custom scrollbars, and `prefers-reduced-motion` compliance.
+- `frontend/src/app/layout.tsx`: Real Google Font loading via `next/font/google` for Inter (UI) and JetBrains Mono (data/code).
+
+#### UI Components (`frontend/src/components/ui/`)
+- `Button.tsx`: Accessible button supporting variants (`primary`, `secondary`, `outline`, `ghost`, `destructive`), sizes (`sm`, `md`, `lg`), spinner loading state, and disabled semantics.
+- `Card.tsx`: Flexible card system with `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, and `CardFooter`.
+- `Tabs.tsx`: Accessible tab interface with keyboard navigation and ARIA state management.
+- `Badge.tsx`: Status indicator pill supporting 7 semantic variants.
+- `Tooltip.tsx`: Hover/focus tooltip with delay and directional positioning.
+- `Dialog.tsx`: Modal dialog with focus trap, backdrop dismissal, and Escape key handling.
+- `Toast.tsx`: Notification system with auto-dismiss, manual dismissal, and `useToast` hook.
+- `Progress.tsx`: Accessible progress indicator supporting determinate and indeterminate modes.
+- `Skeleton.tsx`: Motion-reduced pulse placeholder for asynchronous content loading.
+- `FileDropzone.tsx`: Drag-and-drop and file-browse component with client-side file extension checking (`.pdf`, `.docx`, `.txt`) and 10 MB size ceiling validation.
+- `EmptyState.tsx`: Accessible empty state component with icon, heading, description, and optional action buttons.
+
+#### App Shell & Navigation (`frontend/src/components/layout/AppShell.tsx`)
+- Fixed desktop sidebar (256px wide) with active route indicator, system status badge, and methodology link.
+- Mobile responsive drawer with accessible hamburger toggle, backdrop blur, and focus management.
+- Sticky top navigation bar with breadcrumb tracking and privacy mode indicators.
+
+#### App Routes (`frontend/src/app/`)
+- `/`: Methodology-first Landing Page with prominent scientific limitations disclosure and zero fabricated statistics.
+- `/dashboard`: Operational overview and empty state for past activity.
+- `/checker`: Content inspection view with document dropzone and text analysis input.
+- `/humanizer`: Dual-pane writing improvement layout for source and revised text review.
+- `/history`: Ephemeral audit history view explaining zero-retention defaults.
+- `/reports/[id]`: Dynamic report lookup view with unpopulated record notification.
+- `/settings`: System configuration overview for privacy retention, compute boundaries, and LLM endpoints.
+
+#### Typed API Client (`frontend/src/lib/api-client.ts`)
+- Strict typed client adhering to `docs/API_SPEC.md` contracts.
+- Custom `ApiException` preserving RFC 7807 error envelopes (`code`, `message`, `details`, `request_id`).
+- Universal `RequestState<T>` union type for predictable UI states.
+
+#### Verification & Quality Gates
+- 10 Vitest test suites, 17/17 passing unit tests.
+- 0 ESLint warnings or errors (`next lint`).
+- Next.js production build (`next build`) compiled 9 static and dynamic routes with zero errors.
+- Axe-Core accessibility audit achieved 100% score across all 7 routes.
+- Responsive audit verified seamless rendering across 375px, 768px, and 1280px viewports.
+- Digits-in-copy review confirmed zero invented marketing statistics or fabricated user numbers.
+
+---
+
 ### Added - 2026-11-22 (Phase 6: Multi-Stage Post-Rewrite Verification Layer)
 
 #### New Services
