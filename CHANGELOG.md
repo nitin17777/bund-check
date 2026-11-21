@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 6: Multi-Stage Post-Rewrite Verification Layer)
+
+#### New Services
+- numbers.py - numeric/date/unit integrity checker; normalizes 1,000<->1000; CRITICAL on dropped/mutated values, WARN on introduced values
+- citations.py - citation set diff (numbered [1], author-year, DOI); CRITICAL on dropped citations
+- entities.py - spaCy NER entity diff with capitalized heuristic fallback (en_core_web_sm); CRITICAL on dropped entities
+- structure.py - paragraph count alignment; WARN on PARAGRAPH_COUNT_MISMATCH (merge/split/delete/add)
+- semantic.py - negation polarity keyword diff, cosine similarity via all-MiniLM-L6-v2, optional NLI via cross-encoder/nli-deberta-v3-small
+- aggregate.py - runs all 5 checkers, determines PASSED/NEEDS_REVIEW/FAILED; per-paragraph breakdown at 1:1 alignment
+
+#### New Endpoint
+- POST /api/v1/verify - accepts {source_text, target_text, enable_nli}, returns VerificationReport with status, similarity score, severity-sorted findings, per-paragraph results, limitations in every response
+
+#### Models Updated
+- ImproveRequest: added run_verification (bool) and enable_nli (bool) flags
+- ParagraphImprovement: added optional verification_report field
+- run_improver_pipeline: wires per-paragraph verification when run_verification=True
+
+#### Configuration Added
+- SEMANTIC_SIMILARITY_THRESHOLD_PASS=0.88, SEMANTIC_SIMILARITY_THRESHOLD_REVIEW=0.75
+- NLI_CONTRADICTION_THRESHOLD=0.10, ENABLE_NLI_BY_DEFAULT=False
+
+#### Measured Precision/Recall (40-case fixture set)
+- NEGATION_DROPPED: P=1.00 R=1.00
+- PARAGRAPH_COUNT_MISMATCH: P=1.00 R=1.00
+- CITATION_DROPPED: P=1.00 R=0.80
+- NUMERIC_VALUE_DROPPED_OR_ALTERED: P=0.60 R=1.00
+- ENTITY_DROPPED: P=0.44 R=0.80
+- Full test suite: 111 passed, 1 skipped, 0 failures
+
+---
+
 ### Added - 2026-11-22 (Phase 5: Writing Improver Pipeline & Protected Span Preservation)
 - `backend/app/services/improver/providers/base.py`: Abstract `LLMProvider` interface defining standardized text generation with token and cost tracking.
 - `backend/app/services/improver/providers/hosted.py`: Hosted provider implementation supporting Groq, OpenRouter, and OpenAI with secure key validation, error propagation, and pricing models.

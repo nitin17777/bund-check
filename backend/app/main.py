@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.core.config import settings
 from backend.app.core.errors import DocumentProcessingException, ErrorEnvelope, ErrorBody
-from backend.app.api.v1.endpoints import documents, check, improve
+from backend.app.api.v1.endpoints import documents, check, improve, verify
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -46,6 +46,7 @@ async def document_processing_exception_handler(request: Request, exc: DocumentP
 app.include_router(documents.router, prefix=settings.API_V1_STR)
 app.include_router(check.router, prefix=settings.API_V1_STR)
 app.include_router(improve.router, prefix=settings.API_V1_STR)
+app.include_router(verify.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/v1/health")

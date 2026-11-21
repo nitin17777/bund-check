@@ -108,6 +108,8 @@ async def run_improver_pipeline(
     text: str,
     mode: ImproverMode = "academic_clarity",
     provider_override: Optional[str] = None,
+    run_verification: bool = False,
+    enable_nli: bool = False,
 ) -> ImproveResponse:
     """
     Executes end-to-end writing improvement across paragraph chunks.
@@ -174,6 +176,18 @@ async def run_improver_pipeline(
             total_usage.total_tokens += usage["total_tokens"]
             total_usage.estimated_cost_usd += usage["estimated_cost_usd"]
 
+            # Optional per-paragraph verification
+            para_verification = None
+            if run_verification:
+                try:
+                    para_verification = run_full_verification(
+                        source_text=chunk.text,
+                        target_text=revised_text,
+                        enable_nli=enable_nli,
+                    )
+                except Exception as ve:
+                    logger.warning("Verification failed for paragraph %d: %s", chunk.chunk_index, ve)
+
             improved_paragraphs.append(
                 ParagraphImprovement(
                     paragraph_index=chunk.chunk_index,
@@ -182,6 +196,7 @@ async def run_improver_pipeline(
                     is_heading=False,
                     status="SUCCESS",
                     changes=changes,
+                    verification_report=para_verification,
                 )
             )
         except Exception as e:

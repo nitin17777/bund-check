@@ -1,0 +1,322 @@
+[
+  {
+    "id": "clean_01",
+    "category": "clean_rewrite",
+    "source": "The study examined the effects of caffeine on cognitive performance in healthy adults.",
+    "target": "Researchers investigated how caffeine affects cognitive performance in healthy adults.",
+    "expected_findings": [],
+    "notes": "Clean paraphrase; no factual changes expected."
+  },
+  {
+    "id": "clean_02",
+    "category": "clean_rewrite",
+    "source": "Participants completed a battery of tests measuring attention, memory, and reaction time.",
+    "target": "The participants completed a series of tests that assessed attention, memory, and reaction time.",
+    "expected_findings": [],
+    "notes": "Minor rewording; all content preserved."
+  },
+  {
+    "id": "clean_03",
+    "category": "clean_rewrite",
+    "source": "Results were statistically significant (p < 0.05) across all three conditions.",
+    "target": "Findings were statistically significant (p < 0.05) in all three conditions.",
+    "expected_findings": [],
+    "notes": "Equivalent restatement."
+  },
+  {
+    "id": "clean_04",
+    "category": "clean_rewrite",
+    "source": "The model achieved an accuracy of 87.3% on the test set.",
+    "target": "On the test set, the model reached an accuracy of 87.3%.",
+    "expected_findings": [],
+    "notes": "Same number, different word order."
+  },
+  {
+    "id": "clean_05",
+    "category": "clean_rewrite",
+    "source": "Data collection occurred between January 2021 and March 2022.",
+    "target": "Data were collected from January 2021 to March 2022.",
+    "expected_findings": [],
+    "notes": "Same dates reformatted."
+  },
+  {
+    "id": "number_01",
+    "category": "changed_number",
+    "source": "The sample consisted of 42 participants aged 18 to 65.",
+    "target": "The sample consisted of 45 participants aged 18 to 65.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Participant count changed: 42 → 45."
+  },
+  {
+    "id": "number_02",
+    "category": "changed_number",
+    "source": "The drug reduced symptoms by 68% compared to placebo.",
+    "target": "The drug reduced symptoms by 86% compared to placebo.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Percentage reversed: 68% → 86%."
+  },
+  {
+    "id": "number_03",
+    "category": "changed_number",
+    "source": "The dosage was 500 mg administered twice daily.",
+    "target": "The dosage was 250 mg administered twice daily.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Dosage halved: 500 mg → 250 mg."
+  },
+  {
+    "id": "number_04",
+    "category": "changed_number",
+    "source": "Revenue increased by $1,000,000 year over year.",
+    "target": "Revenue increased by $100,000 year over year.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Revenue 10x smaller after rewrite."
+  },
+  {
+    "id": "number_05",
+    "category": "changed_number",
+    "source": "The trial ran for 24 weeks from the date of enrolment.",
+    "target": "The trial ran for 12 weeks from the date of enrolment.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Duration halved: 24 weeks → 12 weeks."
+  },
+  {
+    "id": "citation_01",
+    "category": "dropped_citation",
+    "source": "This finding aligns with prior work by Smith et al. [1] and Jones (2019).",
+    "target": "This finding aligns with prior work in the literature.",
+    "expected_findings": [{"code": "CITATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Both citations removed entirely."
+  },
+  {
+    "id": "citation_02",
+    "category": "dropped_citation",
+    "source": "The methodology follows [3, 4] with modifications introduced by Brown (2021).",
+    "target": "The methodology follows [3, 4] with modifications.",
+    "expected_findings": [{"code": "CITATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Author-year citation removed."
+  },
+  {
+    "id": "citation_03",
+    "category": "dropped_citation",
+    "source": "The dataset was published at doi:10.1038/s41586-021-03819-2.",
+    "target": "The dataset was published in a leading journal.",
+    "expected_findings": [{"code": "CITATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "DOI replaced with vague phrase."
+  },
+  {
+    "id": "citation_04",
+    "category": "dropped_citation",
+    "source": "Multiple studies [2], [5], [7] confirm this effect.",
+    "target": "Multiple studies [2] confirm this effect.",
+    "expected_findings": [{"code": "CITATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Citations [5] and [7] dropped."
+  },
+  {
+    "id": "citation_05",
+    "category": "dropped_citation",
+    "source": "Earlier research (Williams et al., 2018; Patel, 2020) laid the groundwork.",
+    "target": "Earlier research laid the groundwork for this study.",
+    "expected_findings": [{"code": "CITATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Both author-year citations removed."
+  },
+  {
+    "id": "entity_01",
+    "category": "swapped_entity",
+    "source": "Dr. Sarah Chen led the research team at Johns Hopkins University.",
+    "target": "Dr. Michael Liu led the research team at Johns Hopkins University.",
+    "expected_findings": [{"code": "ENTITY_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Person name swapped: Sarah Chen → Michael Liu."
+  },
+  {
+    "id": "entity_02",
+    "category": "swapped_entity",
+    "source": "The FDA approved the treatment on March 15, 2023.",
+    "target": "The EMA approved the treatment on March 15, 2023.",
+    "expected_findings": [{"code": "ENTITY_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Agency swapped: FDA → EMA."
+  },
+  {
+    "id": "entity_03",
+    "category": "swapped_entity",
+    "source": "Pfizer and BioNTech collaborated on the vaccine development.",
+    "target": "Moderna and BioNTech collaborated on the vaccine development.",
+    "expected_findings": [{"code": "ENTITY_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Company name swapped: Pfizer → Moderna."
+  },
+  {
+    "id": "entity_04",
+    "category": "swapped_entity",
+    "source": "The study was funded by the National Institutes of Health.",
+    "target": "The study was funded by the European Research Council.",
+    "expected_findings": [{"code": "ENTITY_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Funding body swapped."
+  },
+  {
+    "id": "entity_05",
+    "category": "swapped_entity",
+    "source": "The experiment was conducted in Paris, France.",
+    "target": "The experiment was conducted in Berlin, Germany.",
+    "expected_findings": [{"code": "ENTITY_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Location swapped: Paris/France → Berlin/Germany."
+  },
+  {
+    "id": "negation_01",
+    "category": "negation_flipped",
+    "source": "The authors did not confirm the hypothesis.",
+    "target": "The authors confirmed the hypothesis.",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Negation 'not' removed; meaning reversed."
+  },
+  {
+    "id": "negation_02",
+    "category": "negation_flipped",
+    "source": "The treatment was never shown to be effective.",
+    "target": "The treatment was shown to be effective.",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Negation 'never' removed."
+  },
+  {
+    "id": "negation_03",
+    "category": "negation_flipped",
+    "source": "Neither group showed significant improvement.",
+    "target": "Both groups showed significant improvement.",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "Neither → Both: polarity reversed. LIMITATION: 'both' is not detected as negation introduction."
+  },
+  {
+    "id": "negation_04",
+    "category": "negation_flipped",
+    "source": "The drug cannot be used in patients with liver disease.",
+    "target": "The drug can be used in patients with liver disease.",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "cannot → can: critical contraindication removed."
+  },
+  {
+    "id": "negation_05",
+    "category": "negation_flipped",
+    "source": "There was no statistically significant difference between groups.",
+    "target": "There was a statistically significant difference between groups.",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "no → a: core finding reversed."
+  },
+  {
+    "id": "structure_01",
+    "category": "structural_change",
+    "source": "Introduction paragraph.\n\nMethods paragraph.\n\nResults paragraph.",
+    "target": "Introduction paragraph.\n\nMethods paragraph.",
+    "expected_findings": [{"code": "PARAGRAPH_COUNT_MISMATCH", "severity": "WARN"}],
+    "notes": "Third paragraph deleted."
+  },
+  {
+    "id": "structure_02",
+    "category": "structural_change",
+    "source": "Background and context.\n\nCore analysis and findings.",
+    "target": "Background and context. Core analysis and findings.",
+    "expected_findings": [{"code": "PARAGRAPH_COUNT_MISMATCH", "severity": "WARN"}],
+    "notes": "Two paragraphs merged into one."
+  },
+  {
+    "id": "structure_03",
+    "category": "structural_change",
+    "source": "A single paragraph with all the content together as one block.",
+    "target": "First portion of the content.\n\nSecond portion of the content.",
+    "expected_findings": [{"code": "PARAGRAPH_COUNT_MISMATCH", "severity": "WARN"}],
+    "notes": "One paragraph split into two."
+  },
+  {
+    "id": "structure_04",
+    "category": "structural_change",
+    "source": "Para one.\n\nPara two.\n\nPara three.\n\nPara four.\n\nPara five.",
+    "target": "Para one.\n\nPara two.\n\nPara three.",
+    "expected_findings": [{"code": "PARAGRAPH_COUNT_MISMATCH", "severity": "WARN"}],
+    "notes": "Last two paragraphs dropped."
+  },
+  {
+    "id": "structure_05",
+    "category": "structural_change",
+    "source": "Opening statement.\n\nDetailed analysis.",
+    "target": "Opening statement.\n\nDetailed analysis.\n\nAdded concluding paragraph.",
+    "expected_findings": [{"code": "PARAGRAPH_COUNT_MISMATCH", "severity": "WARN"}],
+    "notes": "Extra paragraph added in target."
+  },
+  {
+    "id": "fabricated_01",
+    "category": "fabricated_claim",
+    "source": "The model was trained on 100,000 examples.",
+    "target": "The model was trained on 100,000 examples and achieved state-of-the-art results on five benchmarks.",
+    "expected_findings": [],
+    "notes": "KNOWN BLIND SPOT: fabricated claim about benchmarks cannot be detected by deterministic rules. No finding expected."
+  },
+  {
+    "id": "fabricated_02",
+    "category": "fabricated_claim",
+    "source": "The compound inhibits the enzyme.",
+    "target": "The compound inhibits the enzyme and has been shown to cure the disease in clinical trials.",
+    "expected_findings": [],
+    "notes": "KNOWN BLIND SPOT: fabricated clinical claim. No finding expected."
+  },
+  {
+    "id": "fabricated_03",
+    "category": "fabricated_claim",
+    "source": "The algorithm runs in O(n log n) time.",
+    "target": "The algorithm runs in O(n log n) time and was developed at MIT.",
+    "expected_findings": [],
+    "notes": "KNOWN BLIND SPOT: fabricated provenance. MIT may be caught as ENTITY_INTRODUCED (WARN)."
+  },
+  {
+    "id": "fabricated_04",
+    "category": "fabricated_claim",
+    "source": "Patient outcomes were measured at 6 months.",
+    "target": "Patient outcomes were measured at 6 months; mortality was reduced by 32%.",
+    "expected_findings": [],
+    "notes": "KNOWN BLIND SPOT: invented mortality statistic. The 32% may appear as NUMERIC_VALUE_INTRODUCED (WARN)."
+  },
+  {
+    "id": "fabricated_05",
+    "category": "fabricated_claim",
+    "source": "The report was submitted on time.",
+    "target": "The report was submitted on time and received a grade of A+.",
+    "expected_findings": [],
+    "notes": "KNOWN BLIND SPOT: fabricated grade. No critical finding expected."
+  },
+  {
+    "id": "subtle_01",
+    "category": "subtle_case",
+    "source": "The concentration was forty-two micrograms per millilitre.",
+    "target": "The concentration was 42 mcg/mL.",
+    "expected_findings": [],
+    "notes": "Number-to-digit conversion; units reformatted. Equivalent content — expect no CRITICAL finding. LIMITATION: may trigger false NUMERIC_VALUE_DROPPED if word-form '42' not normalized."
+  },
+  {
+    "id": "subtle_02",
+    "category": "subtle_case",
+    "source": "About 1,000 patients were enrolled.",
+    "target": "Approximately 1000 patients were enrolled.",
+    "expected_findings": [],
+    "notes": "1,000 and 1000 should normalize to same value."
+  },
+  {
+    "id": "subtle_03",
+    "category": "subtle_case",
+    "source": "The result barely reached significance (p = 0.049).",
+    "target": "The result reached significance (p = 0.049).",
+    "expected_findings": [{"code": "NEGATION_DROPPED", "severity": "CRITICAL"}],
+    "notes": "LIMITATION: 'barely' is in NEGATION_WORDS; dropping it is flagged as CRITICAL."
+  },
+  {
+    "id": "subtle_04",
+    "category": "subtle_case",
+    "source": "The model failed to converge after 100 epochs.",
+    "target": "The model converged after 100 epochs.",
+    "expected_findings": [],
+    "notes": "KNOWN LIMITATION: 'failed to' is implicit negation; keyword approach misses this — no CRITICAL finding expected."
+  },
+  {
+    "id": "subtle_05",
+    "category": "subtle_case",
+    "source": "Outcomes improved in 3 of 5 participants.",
+    "target": "Outcomes improved in the majority of participants.",
+    "expected_findings": [{"code": "NUMERIC_VALUE_DROPPED_OR_ALTERED", "severity": "CRITICAL"}],
+    "notes": "Specific count replaced with vague qualifier. '3' and '5' dropped."
+  }
+]

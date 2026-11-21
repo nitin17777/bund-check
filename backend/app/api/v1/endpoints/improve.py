@@ -39,6 +39,8 @@ async def improve_text(payload: ImproveRequest, request: Request) -> ImproveResp
             text=payload.text,
             mode=payload.mode,
             provider_override=payload.provider,
+            run_verification=payload.run_verification,
+            enable_nli=payload.enable_nli,
         )
         logger.info(
             "Improvement complete: revision_id=%s, mode=%s, paragraphs=%d, cost=$%.6f",

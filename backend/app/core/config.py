@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     MIN_WORD_COUNT_RELIABLE: int = 150
     MIN_WORD_COUNT_EVALUATE: int = 50
 
+    # Verification Engine Settings
+    SEMANTIC_SIMILARITY_THRESHOLD_PASS: float = 0.88
+    SEMANTIC_SIMILARITY_THRESHOLD_REVIEW: float = 0.75
+    NLI_CONTRADICTION_THRESHOLD: float = 0.10
+    ENABLE_NLI_BY_DEFAULT: bool = False
+    MAX_VERIFY_TEXT_LENGTH: int = 100000  # characters
+
     # Improver & LLM Provider Settings
     DEFAULT_IMPROVER_PROVIDER: str = "groq"  # "groq", "openrouter", "openai", "local_small"
     GROQ_API_KEY: str = ""

@@ -4,6 +4,7 @@ Pydantic Data Models for the Writing Improver Service.
 
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
+from backend.app.models.verification import VerificationReport
 
 ImproverMode = Literal[
     "natural_conversational",
@@ -30,6 +31,10 @@ class ParagraphImprovement(BaseModel):
     status: str = Field(default="SUCCESS", description="'SUCCESS', 'SKIPPED_HEADING', 'FAILED'")
     changes: List[SentenceChange] = Field(default_factory=list, description="Sentence-aligned edits")
     error_message: Optional[str] = None
+    verification_report: Optional[VerificationReport] = Field(
+        default=None,
+        description="Per-paragraph verification report (populated when run_verification=True in ImproveRequest)"
+    )
 
 
 class UsageAccounting(BaseModel):
@@ -48,6 +53,14 @@ class ImproveRequest(BaseModel):
     provider: Optional[str] = Field(
         default=None,
         description="Override provider (e.g. 'groq', 'openrouter', 'openai', 'local_small'). Uses default if unset."
+    )
+    run_verification: bool = Field(
+        default=False,
+        description="If True, run full verification on each improved paragraph and attach VerificationReport"
+    )
+    enable_nli: bool = Field(
+        default=False,
+        description="Enable NLI contradiction check in verification (CPU-bound; only used if run_verification=True)"
     )
 
 
