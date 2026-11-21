@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 8 (AI Checker Workspace) — Content Checker Workspace with Sentence Heatmap, Live API Extraction, Limitations Disclosure & Report Export  
-**Status**: Completed and Verified (14/14 Playwright E2E Tests Passing across Desktop & Mobile, 20/20 Vitest UI Tests Passing, Next.js Build Passing, Live Backend E2E Passing)
+**Current Phase**: Phase 9 (End-to-End Integration, Security Hardening & Rate Limiting) + Phase 7 (Task Manager & Async Polling)  
+**Status**: Completed and Verified (156/157 Python Tests Passing, 1 Skipped; 45/45 Phase 9 Security Tests Passing; 14/14 Playwright E2E Tests Passing; 20/20 Vitest UI Tests Passing; Next.js Build Passing; Zero Warnings)
 
 ---
 
@@ -17,9 +17,176 @@
 | **Phase 4** | Backend Detector Integration & Content Check API (`/check`, `/check/report`) | **Completed** | 2026-11-22 |
 | **Phase 5** | Provider-Agnostic Writing Improver Pipeline & Protected Spans (`/improve`) | **Completed** | 2026-11-22 |
 | **Phase 6** | Multi-Stage Post-Rewrite Verification Layer (`/verify`) | **Completed** | 2026-11-22 |
-| **Phase 7** | Task Manager, Async Polling & Status Queues | Pending | — |
+| **Phase 7** | Task Manager, Async Polling & Status Queues (`/tasks/{task_id}`) | **Completed** | 2026-11-22 |
 | **Phase 8** | Next.js Frontend — AI Checker Workspace, Heatmap & Reports | **Completed** | 2026-11-22 |
-| **Phase 9** | Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
+| **Phase 9** | End-to-End Integration, Security Hardening & Rate Limiting | **Completed** | 2026-11-22 |
+| **Phase 10** | Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
+
+---
+
+## Session Log: Phase 9 & Phase 7 Implementation & Verification (Security Hardening, Rate Limiting & Task Dispatch)
+
+### Completed Tasks
+1. **Security Headers Middleware (`backend/app/core/security.py`)**:
+   - Implemented `SecurityHeadersMiddleware` adding mandatory production headers:
+     - `Strict-Transport-Security`: `max-age=63072000; includeSubDomains; preload`
+     - `X-Content-Type-Options`: `nosniff`
+     - `X-Frame-Options`: `DENY`
+     - `Referrer-Policy`: `strict-origin-when-cross-origin`
+     - `Permissions-Policy`: `microphone=(), camera=(), geolocation=(), payment=()`
+     - `Content-Security-Policy`: Restrictive policy (`frame-ancestors 'none'; default-src 'none'`) with selective relaxation for Swagger UI (`/docs`, `/redoc`, `/openapi.json`).
+     - `Cache-Control`: `no-store, no-cache, must-revalidate, private` on all `/api/` routes preventing browser document persistence.
+   - Request-ID injection middleware: Assigns or echoes `X-Request-ID` across every HTTP exchange for distributed request tracing without leaking document content.
+
+2. **Token-Bucket Rate Limiting Engine (`backend/app/core/security.py`, `backend/app/core/config.py`)**:
+   - Integrated `slowapi` rate limiter backed by in-memory token-bucket keyed by client remote address.
+   - Configured granular per-endpoint ceilings:
+     - File upload & extraction (`/api/v1/documents/extract`): 20 requests/minute
+     - Content detection analysis (`/api/v1/check`): 30 requests/minute
+     - Report exports (`/api/v1/check/report`): 20 requests/minute
+     - Writing improver LLM generation (`/api/v1/improve`): 10 requests/minute
+     - Standalone post-rewrite verification (`/api/v1/verify`): 30 requests/minute
+     - Task polling (`/api/v1/tasks/{task_id}`): 120 requests/minute
+     - Health probe (`/api/v1/health`): 60 requests/minute
+   - RFC 7807 problem details handler: Emits HTTP 429 with `code: TOO_MANY_REQUESTS`, actionable wait message, and `Retry-After: 60` header.
+
+3. **Content-Free Structured Logging (`backend/app/core/logging.py`)**:
+   - Integrated `structlog` with dedicated `_sanitize_processor` intercepting and redacting sensitive document fields (`text`, `raw_text`, `content`, `original`, `revised`, `rewritten`, `diff`, `body`, `source_text`, `target_text`, `prompt`, `completion`, `masked_text`).
+   - Replaces long string values ($> 200$ chars) with safe `[TRUNCATED:<len>chars]` markers to prevent accidental leakage of raw manuscripts.
+   - Modern FastAPI `lifespan` context manager eliminating deprecated `@app.on_event("startup")` and `@app.on_event("shutdown")` warnings.
+
+4. **Async Task Manager & Polling Interface (Phase 7 Deliverable) (`backend/app/core/task_manager.py`, `backend/app/api/v1/endpoints/tasks.py`)**:
+   - Implemented thread-safe `InMemoryTaskManager` backed by `asyncio.create_task` and `asyncio.to_thread`.
+   - Upgradable abstract interface allowing drop-in Redis/Celery queue replacement for multi-instance scaling.
+   - Lifecycle tracking: `pending` $\to$ `processing` (with progress fraction $[0.0, 1.0]$) $\to$ `completed` / `failed`.
+   - Result caching with automatic 30-minute TTL expiry (`cleanup_expired`).
+   - Exposed `GET /api/v1/tasks/{task_id}` polling endpoint matching `API_SPEC.md § 3.4`.
+
+5. **Upload Ingestion Hardening Verification (`tests/test_phase9_security.py`)**:
+   - Verified rejection of empty uploads (HTTP 400 `FILE_EMPTY`).
+   - Verified rejection of binary / null-byte TXT injection (HTTP 422 `CORRUPTED_OR_BINARY_FILE`).
+   - Verified rejection of extension vs magic-byte spoofing (HTTP 422 `EXTENSION_SIGNATURE_MISMATCH`).
+   - Verified rejection of VBA macro files and `.docm` archives (HTTP 422 `MACRO_DOCUMENTS_PROHIBITED`).
+   - Verified rejection of files exceeding 10 MB limit (HTTP 413 `PAYLOAD_TOO_LARGE`).
+   - Verified rejection of high-compression ZIP bombs ($> 20:1$ ratio) (HTTP 422 `ZIP_BOMB_DETECTED`).
+
+6. **Comprehensive Automated Verification (Zero-Mock)**:
+   - **Phase 9 Test Suite (`tests/test_phase9_security.py`)**: 45/45 tests passing covering security headers, rate limiting 429 responses, ingestion attacks, task manager lifecycle, structlog redaction, health schema, full file upload $\to$ extract $\to$ check pipeline, Unicode offset round-trip, verification endpoints, and non-hardcoded score uniqueness.
+   - **Full Backend Repository Suite (`tests/`)**: 156 passed, 1 skipped across all phases (0 failures, 0 warnings).
+   - **Frontend Vitest Suite (`frontend/`)**: 12 test files passed, 20/20 unit tests passed.
+   - **Next.js Production Build (`frontend/`)**: 9/9 pages compiled and statically optimized with 0 errors.
+   - **ESLint (`frontend/`)**: 0 warnings, 0 errors.
+   - **Playwright E2E Suite (`frontend/`)**: 14/14 tests passing against the live hardened backend across Desktop Chrome and Mobile Chrome.
+
+### Test Execution Commands & Actual Raw Results
+```powershell
+# Phase 9 Security Hardening & Integration Test Suite
+$env:HF_HUB_OFFLINE="1"; $env:TRANSFORMERS_OFFLINE="1"; .venv\Scripts\python.exe -m pytest tests/test_phase9_security.py -v
+```
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.2.0, pluggy-1.7.0 -- D:\bund-check\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\bund-check
+configfile: pyproject.toml
+plugins: anyio-4.16.0, asyncio-1.5.0, cov-7.1.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 45 items
+
+tests/test_phase9_security.py::TestSecurityHeaders::test_health_has_security_headers PASSED [  2%]
+tests/test_phase9_security.py::TestSecurityHeaders::test_api_cache_control_no_store PASSED [  4%]
+tests/test_phase9_security.py::TestSecurityHeaders::test_csp_on_api_endpoint PASSED [  6%]
+tests/test_phase9_security.py::TestSecurityHeaders::test_x_request_id_echoed PASSED [  8%]
+tests/test_phase9_security.py::TestSecurityHeaders::test_x_request_id_generated_when_absent PASSED [ 11%]
+tests/test_phase9_security.py::TestSecurityHeaders::test_permissions_policy_disables_camera PASSED [ 13%]
+tests/test_phase9_security.py::TestRateLimiter::test_rate_limit_on_health_after_burst PASSED [ 15%]
+tests/test_phase9_security.py::TestIngestionHardening::test_empty_file_rejected PASSED [ 17%]
+tests/test_phase9_security.py::TestIngestionHardening::test_null_byte_txt_rejected PASSED [ 20%]
+tests/test_phase9_security.py::TestIngestionHardening::test_mismatched_magic_bytes_rejected PASSED [ 22%]
+tests/test_phase9_security.py::TestIngestionHardening::test_macro_docx_rejected PASSED [ 24%]
+tests/test_phase9_security.py::TestIngestionHardening::test_oversized_file_rejected PASSED [ 26%]
+tests/test_phase9_security.py::TestIngestionHardening::test_unsupported_extension_rejected PASSED [ 28%]
+tests/test_phase9_security.py::TestIngestionHardening::test_no_file_no_json_rejected PASSED [ 31%]
+tests/test_phase9_security.py::TestIngestionHardening::test_empty_text_json_rejected PASSED [ 33%]
+tests/test_phase9_security.py::TestIngestionHardening::test_decompression_bomb_docx_rejected PASSED [ 35%]
+tests/test_phase9_security.py::TestTaskManager::test_submit_and_poll_to_completion PASSED [ 37%]
+tests/test_phase9_security.py::TestTaskManager::test_failed_task_captured PASSED [ 40%]
+tests/test_phase9_security.py::TestTaskManager::test_unknown_task_returns_none PASSED [ 42%]
+tests/test_phase9_security.py::TestTaskManager::test_multiple_concurrent_tasks PASSED [ 44%]
+tests/test_phase9_security.py::TestTaskPollEndpoint::test_unknown_task_returns_404 PASSED [ 46%]
+tests/test_phase9_security.py::TestTaskPollEndpoint::test_completed_task_returns_result_via_http PASSED [ 48%]
+tests/test_phase9_security.py::TestStructlogSanitizer::test_forbidden_field_redacted PASSED [ 51%]
+tests/test_phase9_security.py::TestStructlogSanitizer::test_safe_field_preserved PASSED [ 53%]
+tests/test_phase9_security.py::TestStructlogSanitizer::test_oversized_string_truncated PASSED [ 55%]
+tests/test_phase9_security.py::TestStructlogSanitizer::test_non_string_value_preserved PASSED [ 57%]
+tests/test_phase9_security.py::TestStructlogSanitizer::test_multiple_forbidden_fields_all_redacted PASSED [ 60%]
+tests/test_phase9_security.py::TestHealthEndpoint::test_health_returns_200 PASSED [ 62%]
+tests/test_phase9_security.py::TestHealthEndpoint::test_health_schema PASSED [ 64%]
+tests/test_phase9_security.py::TestHealthEndpoint::test_health_no_document_text_in_response PASSED [ 66%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_short_human_text PASSED [ 68%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_response_has_limitations PASSED [ 71%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_empty_text_rejected PASSED [ 73%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_too_short_text_has_reliability_flag PASSED [ 75%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_report_json_format PASSED [ 77%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_report_html_format PASSED [ 80%]
+tests/test_phase9_security.py::TestCheckPipeline::test_check_invalid_format_rejected PASSED [ 82%]
+tests/test_phase9_security.py::TestFileUploadPipeline::test_txt_file_upload_and_check PASSED [ 84%]
+tests/test_phase9_security.py::TestFileUploadPipeline::test_unicode_txt_offset_roundtrip PASSED [ 86%]
+tests/test_phase9_security.py::TestVerificationEndpoint::test_changed_number_detected PASSED [ 88%]
+tests/test_phase9_security.py::TestVerificationEndpoint::test_dropped_citation_detected PASSED [ 91%]
+tests/test_phase9_security.py::TestVerificationEndpoint::test_clean_rewrite_passes PASSED [ 93%]
+tests/test_phase9_security.py::TestVerificationEndpoint::test_similarity_note_always_present PASSED [ 95%]
+tests/test_phase9_security.py::TestNoHardcodedScores::test_different_inputs_produce_different_scores PASSED [ 97%]
+tests/test_phase9_security.py::TestNoHardcodedScores::test_analysis_id_unique_per_request PASSED [100%]
+
+======================= 45 passed in 11.68s =======================
+```
+```powershell
+# Full Project Test Suite Across All Phases
+$env:HF_HUB_OFFLINE="1"; $env:TRANSFORMERS_OFFLINE="1"; .venv\Scripts\python.exe -m pytest tests/ -v
+```
+```
+======================= 156 passed, 1 skipped in 17.99s =======================
+```
+```powershell
+# Playwright End-to-End Suite against Live Hardened Backend
+cd frontend && npx playwright test
+```
+```
+Running 14 tests using 1 worker
+
+  14 passed (9.6s)
+```
+```powershell
+# Live HTTP Health Check with Security Headers Output
+curl.exe -i http://127.0.0.1:8000/api/v1/health
+```
+```
+HTTP/1.1 200 OK
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: microphone=(), camera=(), geolocation=(), payment=()
+content-security-policy: default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'self'; frame-ancestors 'none';
+cache-control: no-store, no-cache, must-revalidate, private
+x-request-id: req_e24cb8acca43
+
+{"status":"healthy","version":"0.1.0","environment":"development","active_tasks":0}
+```
+
+### Modified / Created Files
+- `backend/app/core/logging.py` *(new)*: Structured, content-free logging via `structlog` with automated field sanitization.
+- `backend/app/core/security.py` *(new)*: Security headers middleware, slowapi rate-limiter builder, and RFC 7807 429 response handler.
+- `backend/app/core/task_manager.py` *(new)*: Upgradable in-memory async task manager with lifecycle status, progress fraction, and result TTL.
+- `backend/app/api/v1/endpoints/tasks.py` *(new)*: `GET /api/v1/tasks/{task_id}` task polling endpoint.
+- `backend/app/core/config.py`: Added rate limiting ceilings (`RATE_LIMIT_UPLOAD`, `RATE_LIMIT_CHECK`, `RATE_LIMIT_IMPROVE`, `RATE_LIMIT_VERIFY`, `RATE_LIMIT_REPORT`), CORS allowed origins, and logging configuration.
+- `backend/app/main.py`: Hardened FastAPI entry point wired with SecurityHeadersMiddleware, SlowAPIMiddleware, request ID tracing, modern `lifespan` context manager, rate limiter state, and task router.
+- `backend/app/api/v1/endpoints/documents.py`: Attached rate-limiting decorators (`20/minute`) and 429 error envelopes.
+- `backend/app/api/v1/endpoints/check.py`: Attached rate-limiting decorators (`30/minute` check, `20/minute` report) and 429 error envelopes.
+- `backend/app/api/v1/endpoints/improve.py`: Attached rate-limiting decorators (`10/minute`) and 429 error envelopes.
+- `backend/app/api/v1/endpoints/verify.py`: Attached rate-limiting decorators (`30/minute`) and 429 error envelopes.
+- `tests/test_phase9_security.py` *(new — 45 tests)*: Comprehensive security, ingestion hardening, rate limiting, and task dispatch test suite.
 
 ---
 

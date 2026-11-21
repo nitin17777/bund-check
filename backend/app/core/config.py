@@ -54,5 +54,24 @@ class Settings(BaseSettings):
     IMPROVER_MAX_RETRIES: int = 2
     MAX_IMPROVE_WORD_COUNT: int = 10000
 
+    # Rate limiting (slowapi token-bucket)
+    RATE_LIMIT_UPLOAD: str = "20/minute"      # file upload & extraction
+    RATE_LIMIT_CHECK: str = "30/minute"       # detection analysis
+    RATE_LIMIT_IMPROVE: str = "10/minute"     # LLM improvement (expensive)
+    RATE_LIMIT_VERIFY: str = "30/minute"      # verification
+    RATE_LIMIT_REPORT: str = "20/minute"      # report export
+
+    # CORS
+    CORS_ALLOWED_ORIGINS: list = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "https://bundcheck.app",
+    ]
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    ENVIRONMENT: str = "development"
+
 
 settings = Settings()

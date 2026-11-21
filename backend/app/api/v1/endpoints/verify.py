@@ -6,17 +6,21 @@ VerificationReport with structured findings and per-paragraph breakdown.
 """
 
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
+from backend.app.core.errors import ErrorEnvelope
+from backend.app.core.security import get_limiter
 from backend.app.models.verification import VerifyRequest, VerificationReport
 from backend.app.services.verification.aggregate import run_full_verification
 
 logger = logging.getLogger(__name__)
+limiter = get_limiter()
 router = APIRouter(tags=["verification"])
 
 
-@router.post("/verify", response_model=VerificationReport)
-async def verify_revision(request: VerifyRequest) -> VerificationReport:
+@router.post("/verify", response_model=VerificationReport, responses={429: {"model": ErrorEnvelope}})
+@limiter.limit("30/minute")
+async def verify_revision(request: Request, payload: VerifyRequest) -> VerificationReport:
     """
     Verify a rewritten text against its original source.
 
@@ -31,15 +35,15 @@ async def verify_revision(request: VerifyRequest) -> VerificationReport:
     """
     logger.info(
         "Verification request: source_len=%d target_len=%d enable_nli=%s",
-        len(request.source_text),
-        len(request.target_text),
-        request.enable_nli,
+        len(payload.source_text),
+        len(payload.target_text),
+        payload.enable_nli,
     )
 
     report = run_full_verification(
-        source_text=request.source_text,
-        target_text=request.target_text,
-        enable_nli=request.enable_nli,
+        source_text=payload.source_text,
+        target_text=payload.target_text,
+        enable_nli=payload.enable_nli,
     )
 
     return report

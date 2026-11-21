@@ -18,6 +18,7 @@ from backend.app.core.errors import (
     ErrorBody,
     ErrorDetail,
 )
+from backend.app.core.security import get_limiter
 from backend.app.models.detection import (
     CheckRequest,
     CheckResponse,
@@ -27,7 +28,7 @@ from backend.app.services.detection.detector import run_detection_pipeline
 from backend.app.services.detection.report import generate_json_report, generate_html_report
 
 logger = logging.getLogger(__name__)
-
+limiter = get_limiter()
 router = APIRouter(prefix="", tags=["detection"])
 
 
@@ -37,10 +38,12 @@ router = APIRouter(prefix="", tags=["detection"])
     responses={
         400: {"model": ErrorEnvelope},
         413: {"model": ErrorEnvelope},
+        429: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},
         504: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("30/minute")
 async def check_content(payload: CheckRequest, request: Request) -> CheckResponse:
     """
     Analyzes document text or pre-extracted document structure for synthetic patterns.
@@ -97,9 +100,11 @@ async def check_content(payload: CheckRequest, request: Request) -> CheckRespons
             "description": "Exported detection report in requested format.",
         },
         400: {"model": ErrorEnvelope},
+        429: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("20/minute")
 async def export_check_report(payload: ReportRequest, request: Request):
     """
     Exports completed detection analysis in JSON, HTML, or PDF format.

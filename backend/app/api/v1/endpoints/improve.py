@@ -7,11 +7,12 @@ import logging
 from fastapi import APIRouter, Request, HTTPException, status
 from backend.app.core.config import settings
 from backend.app.core.errors import DocumentProcessingException, ErrorEnvelope
+from backend.app.core.security import get_limiter
 from backend.app.models.improver import ImproveRequest, ImproveResponse
 from backend.app.services.improver.pipeline import run_improver_pipeline
 
 logger = logging.getLogger(__name__)
-
+limiter = get_limiter()
 router = APIRouter(prefix="", tags=["improver"])
 
 
@@ -22,11 +23,13 @@ router = APIRouter(prefix="", tags=["improver"])
         400: {"model": ErrorEnvelope},
         413: {"model": ErrorEnvelope},
         422: {"model": ErrorEnvelope},
+        429: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},
         502: {"model": ErrorEnvelope},
         504: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("10/minute")
 async def improve_text(payload: ImproveRequest, request: Request) -> ImproveResponse:
     """
     Improves text flow, clarity, and readability across six modes while preserving protected spans.

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-22 (Phase 9: Security Hardening, Rate Limiting & Phase 7: Task Dispatch Engine)
+
+#### Security Headers & Middleware
+- `backend/app/core/security.py`: Implemented `SecurityHeadersMiddleware` adding `Strict-Transport-Security` (`max-age=63072000`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, restrictive `Content-Security-Policy` (`frame-ancestors 'none'`), and `Cache-Control: no-store, no-cache, must-revalidate, private` across all API responses.
+- Implemented `X-Request-ID` tracing middleware assigning unique request identifiers and echoing them back for auditability.
+- Restricted CORS configuration from wildcard to explicitly allowed origins in `backend/app/core/config.py`.
+
+#### Rate Limiting Engine
+- Integrated `slowapi` token-bucket rate limiter keyed by client remote IP.
+- Enforced per-endpoint quotas: 20/min for document extraction, 30/min for content checking, 10/min for writing improvement, 30/min for standalone verification, 20/min for report downloads, and 120/min for task status polling.
+- Implemented RFC 7807 429 error handler returning `TOO_MANY_REQUESTS` code and `Retry-After: 60` header.
+
+#### Content-Free Structured Logging
+- `backend/app/core/logging.py`: Configured `structlog` with dedicated `_sanitize_processor` intercepting and redacting sensitive document fields (`text`, `raw_text`, `original`, `revised`, `content`, `diff`, `prompt`, `completion`) and truncating long values $> 200$ chars to ensure zero document content is leaked into logs.
+- Converted application startup/shutdown to modern FastAPI `lifespan` context manager eliminating deprecation warnings.
+
+#### Task Dispatch & Polling Engine (Phase 7 Deliverable)
+- `backend/app/core/task_manager.py`: Implemented thread-safe `InMemoryTaskManager` backed by `asyncio.create_task` and `asyncio.to_thread` with lifecycle states (`pending`, `processing`, `completed`, `failed`), progress fraction, and automatic 30-minute result TTL expiry.
+- `backend/app/api/v1/endpoints/tasks.py`: Added `GET /api/v1/tasks/{task_id}` polling endpoint matching `API_SPEC.md § 3.4`.
+
+#### Verification & Testing
+- `tests/test_phase9_security.py`: Added 45 tests covering security headers, 429 rate limit triggers, ingestion attack defenses (empty files, null bytes, extension spoofing, macro detection, payload size ceiling, decompression bombs), task manager concurrency, structlog redaction, health schema, full file upload $\to$ check pipeline, and Unicode character offset alignment.
+- Executed entire test suite: 156 passed, 1 skipped across all phases (100% pass rate).
+- Verified Playwright E2E suite against live hardened backend (14/14 tests passing across Desktop Chrome and Mobile Chrome).
+
 ### Added - 2026-11-22 (Phase 8: Live AI Content Checker Workspace, Heatmap & Reports)
 
 #### Checker Workspace & Heatmap (`frontend/src/`)

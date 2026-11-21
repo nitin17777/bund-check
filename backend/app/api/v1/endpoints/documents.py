@@ -14,6 +14,7 @@ from fastapi import APIRouter, File, UploadFile, Request, Body, HTTPException, s
 from fastapi.responses import JSONResponse
 
 from backend.app.core.errors import DocumentProcessingException, ErrorEnvelope, ErrorBody, ErrorDetail
+from backend.app.core.security import get_limiter
 from backend.app.models.document import Document, TextExtractRequest
 from backend.app.services.documents.validators import validate_document_upload, MIME_PDF, MIME_DOCX, MIME_TXT
 from backend.app.services.documents.extractors import (
@@ -23,6 +24,7 @@ from backend.app.services.documents.extractors import (
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+limiter = get_limiter()
 
 
 @router.post(
@@ -32,9 +34,11 @@ router = APIRouter(prefix="/documents", tags=["documents"])
         400: {"model": ErrorEnvelope},
         413: {"model": ErrorEnvelope},
         422: {"model": ErrorEnvelope},
+        429: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},
     },
 )
+@limiter.limit("20/minute")
 async def extract_document(
     request: Request,
     file: Optional[UploadFile] = File(None),
