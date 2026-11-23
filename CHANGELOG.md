@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-24 (Phase 10: Production Deployment, Packaging, Benchmarking & Acceptance)
+
+#### Production Dockerization
+- Created multi-stage non-root container definitions (`backend/Dockerfile` and `frontend/Dockerfile`) with automated healthcheck probes.
+- Added `backend/entrypoint.sh` executing automatic Alembic database migrations (`alembic upgrade head`) on container startup.
+- Added `backend/requirements.txt` with pinned versions for Python 3.11 production runtime.
+- Added `docker-compose.prod.yml` orchestrating PostgreSQL 16, FastAPI, Next.js, and Caddy reverse proxy.
+- Created `Caddyfile` for automated TLS certificate issuance, gzip/zstd compression, and HTTP/2 proxying.
+- Authored `.env.example` documenting all configuration keys with local dev and production options.
+
+#### Deployment Guide & Cost Profiling
+- Published `docs/DEPLOYMENT.md` detailing low-cost cloud deployment architecture (< $20/month).
+- Evaluated workload-to-hardware allocation (CPU vs. GPU vs. Hosted LLM).
+- Profiled exact per-1,000-words improver costs across providers citing November 2026 pricing pages (Groq Llama 3.3 70B: ~$0.00201 / 1k words; OpenAI GPT-4o mini: ~$0.00104 / 1k words).
+
+#### Documentation & Specification Alignment
+- Updated `README.md` with complete architectural guide, honest limitations of detection and meaning preservation, setup instructions, testing commands, and privacy policies.
+- Fixed specification drift in `docs/API_SPEC.md` aligning document extraction paths, health response contracts, and export formats with actual code.
+- Verified fresh-clone reproduction in an isolated temporary directory.
+
 ### Added - 2026-11-24 (Phase 9: Hardening, Security, Benchmarking, CI/CD & Accessibility)
 
 #### Test Suite Audit & CI
