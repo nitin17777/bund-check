@@ -15,6 +15,7 @@ const config: Config = {
           base: "#0E1422",
           card: "#141C2E",
           overlay: "#1A243B",
+          elevated: "#182238",
           active: "#232F4C",
         },
         border: {

@@ -107,7 +107,7 @@ export function ImproverForm({
             onChange={(e) => onSourceTextChange(e.target.value)}
             disabled={isLoading}
             placeholder="Paste your manuscript paragraphs here (e.g. academic drafts, technical documentation, executive summaries)..."
-            className="w-full rounded-md border border-border bg-surface-elevated/40 p-3.5 text-xs font-mono text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent resize-y transition-colors leading-relaxed disabled:opacity-50"
+            className="w-full rounded-md border border-border bg-surface-card p-3.5 text-xs font-mono text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent resize-y transition-colors leading-relaxed disabled:opacity-50"
           />
         </div>
 
