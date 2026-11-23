@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "BundCheck API"
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
+    DATABASE_URL: str = "sqlite:///./test.db"
 
     # Document upload limits
     MAX_FILE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB

@@ -28,6 +28,9 @@ from backend.app.core.logging import configure_logging, get_logger
 from backend.app.core.security import SecurityHeadersMiddleware, get_limiter, rate_limit_exceeded_handler
 from backend.app.core.task_manager import task_manager
 from backend.app.api.v1.endpoints import documents, check, improve, verify, tasks
+from backend.app.api.v1.endpoints.users import router as users_router
+from backend.app.api.v1.endpoints.settings import router as settings_router
+from backend.app.api.v1.endpoints import history, delete, export
 
 # ---------------------------------------------------------------------------
 # Logging setup (must run before any logger.getLogger calls)
@@ -142,6 +145,11 @@ app.include_router(check.router, prefix=settings.API_V1_STR)
 app.include_router(improve.router, prefix=settings.API_V1_STR)
 app.include_router(verify.router, prefix=settings.API_V1_STR)
 app.include_router(tasks.router, prefix=settings.API_V1_STR)
+app.include_router(users_router, prefix=settings.API_V1_STR)
+app.include_router(settings_router, prefix=settings.API_V1_STR)
+app.include_router(history.router, prefix=settings.API_V1_STR)
+app.include_router(delete.router, prefix=settings.API_V1_STR)
+app.include_router(export.router, prefix=settings.API_V1_STR)
 
 
 # ---------------------------------------------------------------------------

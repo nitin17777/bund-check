@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - 2026-11-23 (Frontend Workspace Suite: Dashboard, History, Report Details, Settings & Local Opt-in Store)
+### Added - 2026-11-23 (Backend Phase 8: SQLAlchemy 2 + Alembic, Auth, Endpoints, Export)
+
+#### SQLAlchemy 2 + Alembic Migrations
+- Created SQLAlchemy 2.0 ORM models for users, user_settings, documents, analyses, and revisions
+- All tables use opt-in persistence: only store data when user explicitly opts in
+- Analyses can store scores and stats without document text when user has not opted in
+- Alembic migration scripts support upgrade/downgrade with SQLite
+
+#### Authentication
+- Email + password login with argon2 password hashing
+- Session management via httpOnly session cookies
+- CSRF protection through cookie-based session validation
+- No secrets in code - all credentials loaded from environment variables
+
+#### API Endpoints
+- `GET /api/v1/settings`: Retrieve user settings
+- `PUT /api/v1/settings`: Update user settings (store_opt_in, default_improver_mode, sensitivity_preference, data_retention_days)
+- `GET /api/v1/history`: List user's analysis and revision records
+- `DELETE /api/v1/delete`: Hard delete of all user data or specific document with cascade
+- `POST /api/v1/export`: Export final accepted text as DOCX, TXT, and PDF
+
+#### Export Format Support
+- **DOCX** (python-docx): Attempts to preserve headings, bold, italic, and simple lists; documents known losses
+- **TXT**: Plain text round-trip export
+- **PDF** (reportlab): Simple formatted PDF with title, headings, paragraphs, and basic styling
+
+### Changed
+- `backend/app/main.py`: Integrated new routers (users, settings, history, delete, export)
+- `PROJECT_STATUS.md`: Updated with Phase 8 backend implementation summary
+
+### Fixed
+- Migration up/down now succeeds with SQLite
+- No hardcoded secrets in code (all credentials from environment variables)
+
+### Fixed - 2026-11-23 (Frontend Workspace Suite: Dashboard, History, Report Details, Settings & Local Opt-in Store)
 
 #### Dashboard Workspace (`frontend/src/app/dashboard/page.tsx`)
 - Integrated real-time backend health probe via `GET /api/v1/health` showing live status, version, and environment.
