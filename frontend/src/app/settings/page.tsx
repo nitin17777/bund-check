@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { localStore, UserSettings, DEFAULT_SETTINGS } from "@/lib/local-store";
 
+//just commit
 const IMPROVER_MODES = [
   { id: "academic_clarity", label: "Academic Clarity", desc: "Scholarly precision and objective syntactic cohesion" },
   { id: "professional", label: "Professional & Executive", desc: "Crisp workplace communication and direct voice" },
@@ -151,11 +152,10 @@ export default function SettingsPage() {
                       type="button"
                       disabled={!settings.storeOptIn}
                       onClick={() => setSettings({ ...settings, dataRetentionDays: item.days })}
-                      className={`p-2.5 rounded border text-left transition-all ${
-                        settings.dataRetentionDays === item.days && settings.storeOptIn
+                      className={`p-2.5 rounded border text-left transition-all ${settings.dataRetentionDays === item.days && settings.storeOptIn
                           ? "border-accent bg-accent/10 text-text-primary font-medium"
                           : "border-border/70 bg-surface-base text-text-muted hover:border-border"
-                      } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
                       <div className="font-semibold text-xs">{item.label}</div>
                       <div className="text-[10px] text-text-muted mt-0.5">
@@ -192,17 +192,15 @@ export default function SettingsPage() {
                       onClick={() =>
                         setSettings({ ...settings, defaultImprovementMode: mode.id })
                       }
-                      className={`p-3 rounded-lg border text-left transition-all ${
-                        isSelected
+                      className={`p-3 rounded-lg border text-left transition-all ${isSelected
                           ? "border-accent bg-accent/10 shadow-sm"
                           : "border-border/70 bg-surface-base hover:border-border hover:bg-surface-elevated/40"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span
-                          className={`font-semibold text-xs ${
-                            isSelected ? "text-accent" : "text-text-primary"
-                          }`}
+                          className={`font-semibold text-xs ${isSelected ? "text-accent" : "text-text-primary"
+                            }`}
                         >
                           {mode.label}
                         </span>
