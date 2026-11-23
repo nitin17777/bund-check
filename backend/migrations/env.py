@@ -9,10 +9,23 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
+import os
+import sys
+
+# Ensure repository root is on sys.path so 'backend' package is importable
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Override sqlalchemy.url with DATABASE_URL from settings if available
+from backend.app.core.config import settings
+if getattr(settings, "DATABASE_URL", None):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

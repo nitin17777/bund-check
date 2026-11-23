@@ -40,18 +40,18 @@ All error responses strictly follow the RFC 7807 problem details specification:
 
 | Method | Path | Description | Auth Required | Processing Mode |
 |---|---|---|---|---|
-| `GET` | `/api/v1/health` | Service health, model status, peak VRAM/RAM metrics | Optional | Sync |
-| `POST` | `/api/v1/document/extract` | Ingest PDF/DOCX/TXT; extract text & Markdown tables | Optional | Sync / Async |
+| `GET` | `/api/v1/health` | Service health, version, environment, active tasks count | Optional | Sync |
+| `POST` | `/api/v1/documents/extract` | Ingest PDF/DOCX/TXT or JSON text; extract structured Document | Optional | Sync |
 | `POST` | `/api/v1/check` | Probabilistic AI-pattern analysis & sentence attribution | Optional | Sync (<1k words) / Async (>=1k words) |
 | `GET` | `/api/v1/tasks/{task_id}` | Poll status & retrieve result of asynchronous task | Optional | Sync |
-| `POST` | `/api/v1/check/report` | Export analysis report as PDF or structured JSON | Optional | Sync |
+| `POST` | `/api/v1/check/report` | Export analysis report as HTML or structured JSON | Optional | Sync |
 | `POST` | `/api/v1/improve` | Rewrite text in specified mode with span protection | Optional | Sync (<1k words) / Async (>=1k words) |
-| `POST` | `/api/v1/verify` | Re-run standalone verification audit (source vs rewrite) | Optional | Sync |
-| `POST` | `/api/v1/export` | Export rewritten text to DOCX, PDF, or Markdown | Optional | Sync |
-| `GET` | `/api/v1/history` | List opt-in past analyses and revisions | Required | Sync |
-| `GET` | `/api/v1/settings` | Retrieve user preferences and configured LLM providers | Required | Sync |
-| `PUT` | `/api/v1/settings` | Update user preferences or encrypted LLM keys | Required | Sync |
-| `DELETE`| `/api/v1/delete` | Immediate hard deletion of user data or specific document | Required | Sync |
+| `POST` | `/api/v1/verify` | Standalone verification audit (source vs rewrite) | Optional | Sync |
+| `POST` | `/api/v1/export` | Export rewritten text to DOCX, PDF, or TXT | Optional | Sync |
+| `GET` | `/api/v1/history` | List opt-in past analyses and revisions | Optional / Cookie | Sync |
+| `GET` | `/api/v1/settings` | Retrieve user preferences and configured LLM providers | Optional / Cookie | Sync |
+| `PUT` | `/api/v1/settings` | Update user preferences (store_opt_in, default_improver_mode) | Optional / Cookie | Sync |
+| `DELETE`| `/api/v1/delete` | Immediate hard deletion of user data or specific document | Optional / Cookie | Sync |
 
 ---
 
@@ -63,31 +63,16 @@ All error responses strictly follow the RFC 7807 problem details specification:
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "environment": "production",
-  "ml_engine": {
-    "device": "cuda:0",
-    "measured_peak_vram_mb": 1184.2,
-    "total_vram_mb": 4096.0,
-    "system_ram_used_mb": 4820.0,
-    "system_ram_total_mb": 24576.0,
-    "models_loaded": {
-      "gpu": ["distilgpt2", "distilroberta"],
-      "cpu": ["all-minilm-l6-v2", "nli-deberta-v3-small"]
-    }
-  },
-  "providers": {
-    "default_improver": "groq",
-    "groq_status": "connected",
-    "openrouter_status": "standby"
-  }
+  "active_tasks": 0
 }
 ```
 
 ---
 
-### 3.2 Document Extraction: `POST /api/v1/document/extract`
-Consumes `multipart/form-data`. Accepts `file` field (.pdf, .docx, .txt). Maximum 10 MB.
+### 3.2 Document Extraction: `POST /api/v1/documents/extract`
+Consumes `multipart/form-data` (field `file` for .pdf, .docx, .txt, up to 10 MB) or `application/json` (`{"text": "...", "filename": "pasted.txt"}`).
 
 #### Response: `200 OK`
 ```json
