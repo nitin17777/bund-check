@@ -106,6 +106,7 @@ export default function HistoryPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
             <input
               type="text"
+              aria-label="Search history records"
               placeholder="Search by title, snippet, or identifier..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
