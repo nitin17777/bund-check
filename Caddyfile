@@ -1,0 +1,29 @@
+{
+    # Global options
+    admin off
+}
+
+{$DOMAIN_NAME:localhost} {
+    encode gzip zstd
+
+    # Route backend API and OpenAPI docs
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    handle /docs* {
+        reverse_proxy backend:8000
+    }
+
+    handle /openapi.json* {
+        reverse_proxy backend:8000
+    }
+
+    # Route all other traffic to Next.js frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+}
