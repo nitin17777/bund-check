@@ -5,9 +5,16 @@ import { AppShell } from "@/components/layout/AppShell";
 import { CheckerForm } from "@/components/checker/CheckerForm";
 import { CheckerResults } from "@/components/checker/CheckerResults";
 import { CheckResponse } from "@/lib/api-client";
+import { localStore } from "@/lib/local-store";
 
 export default function CheckerPage() {
   const [analysisResult, setAnalysisResult] = React.useState<CheckResponse | null>(null);
+
+  const handleSuccess = (result: CheckResponse) => {
+    setAnalysisResult(result);
+    // If user has opted into local storage, save record
+    localStore.saveCheckRecord(result);
+  };
 
   return (
     <AppShell>
@@ -27,7 +34,7 @@ export default function CheckerPage() {
             onReset={() => setAnalysisResult(null)}
           />
         ) : (
-          <CheckerForm onSuccess={(result) => setAnalysisResult(result)} />
+          <CheckerForm onSuccess={handleSuccess} />
         )}
       </div>
     </AppShell>

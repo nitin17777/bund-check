@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — Project Execution & Verification Tracker
 
 ## Active Project Phase
-**Current Phase**: Phase 8 (Next.js Frontend — Writing Improver Workspace, Interactive Diffs & Verification Audit)  
-**Status**: Completed and Verified (35/35 Vitest Unit & Component Tests Passing; 30/30 Playwright E2E Tests Passing [16 Improver + 14 Checker]; Next.js Production Build Passing; ESLint 0 Warnings/Errors; 156/157 Python Tests Passing, 1 Skipped)
+**Current Phase**: Phase 8 (Next.js Frontend Complete: Dashboard, History, Reports, Settings, Checker & Improver Workspaces)  
+**Status**: Completed and Verified (46/46 Vitest Unit & Component Tests Passing; 30/30 Playwright E2E Tests Passing; Next.js Production Build Passing; ESLint 0 Warnings/Errors; 156/157 Python Tests Passing, 1 Skipped)
 
 ---
 
@@ -18,9 +18,102 @@
 | **Phase 5** | Provider-Agnostic Writing Improver Pipeline & Protected Spans (`/improve`) | **Completed** | 2026-11-22 |
 | **Phase 6** | Multi-Stage Post-Rewrite Verification Layer (`/verify`) | **Completed** | 2026-11-22 |
 | **Phase 7** | Task Manager, Async Polling & Status Queues (`/tasks/{task_id}`) | **Completed** | 2026-11-22 |
-| **Phase 8** | Next.js Frontend — AI Checker & Writing Improver Workspaces | **Completed** | 2026-11-22 |
+| **Phase 8** | Next.js Frontend — Full Application Suite (Checker, Improver, Dashboard, History, Reports, Settings) | **Completed** | 2026-11-23 |
 | **Phase 9** | End-to-End Integration, Security Hardening & Rate Limiting | **Completed** | 2026-11-22 |
 | **Phase 10** | Docker Deployment, Benchmarking & Documentation Finalization | Pending | — |
+
+---
+
+## Session Log: Dashboard, History, Report Page & Settings Implementation (Phase 8 Completion)
+
+### Completed Tasks
+1. **Dashboard Workspace (`frontend/src/app/dashboard/page.tsx`)**:
+   - Live query against `GET /api/v1/health` displaying real engine health status, version, and environment.
+   - Real metric cards: backend health status, calibrated abstain band (`[0.40 - 0.60]`), count of stored analyses, and count of stored revisions (derived strictly from client state, never fabricated).
+   - Quick Action links to Content Checker and Writing Improver.
+   - Storage policy card displaying zero-storage or opt-in status.
+   - Recent activity list with timestamps, word counts, and direct links to reports.
+   - Accessible empty state for users in zero-retention mode or with unpopulated activity.
+
+2. **Audit History Workspace (`frontend/src/app/history/page.tsx`)**:
+   - List, search, and category filtering (`All Records`, `Content Checks`, `Writing Revisions`) for opted-in records.
+   - Prominent retention advisory informing users of client-side ephemeral storage.
+   - Per-record delete action triggering an accessible confirmation modal (`Dialog`).
+   - Deep links to saved reports (`/reports/[id]`) and writing improver workspaces.
+   - Double-state empty view (no records saved vs no query matches).
+
+3. **Report Detail Workspace (`frontend/src/app/reports/[id]/page.tsx`)**:
+   - Reuses `CheckerResults` to render complete analysis breakdowns for saved audits (calibrated label, empirical confidence interval, scientific limitations panel, model version, SHA-256 hash, document statistics, signals grid, and sentence heatmap).
+   - Server-side report exports (HTML / JSON) wired directly to `/api/v1/check/report`.
+   - Honest unpopulated empty state for non-persisted identifiers with zero mock data.
+
+4. **System Settings Workspace (`frontend/src/app/settings/page.tsx`)**:
+   - "Store my documents" opt-in toggle (default: OFF / strict zero-storage).
+   - Configurable retention window (7, 30, 90 days) with auto-pruning.
+   - Default Writing Improver style preset selector across all 6 modes.
+   - Data portability: JSON export of all configured preferences and saved audit history.
+   - Permanent data deletion action with irreversible confirmation dialog.
+   - Clear disclosure of Phase 8 Roadmap status for remote account sync and cloud endpoints (`GET /api/v1/settings`, `DELETE /api/v1/delete`).
+
+5. **Local Opt-in Session Store (`frontend/src/lib/local-store.ts`)**:
+   - Encapsulated browser storage interface enforcing zero-storage by default.
+   - Automatic record pruning based on configured retention days.
+   - Integrated with Checker (`/checker`) and Improver (`/humanizer`) to capture audit records only when opted in.
+
+6. **Automated Testing & Build Verification**:
+   - `frontend/src/test/DashboardAndSettings.test.tsx`: 11 Vitest unit and component tests verifying localStore zero-retention defaults, opt-in saves, dashboard metrics, history search/filter/deletion, settings persistence, and report detail rendering.
+   - Vitest suite: 15 passed test files, 46/46 passed unit tests.
+   - ESLint: 0 warnings, 0 errors.
+   - Next.js production build: all 9 static and dynamic routes compiled successfully.
+
+### Test Execution Commands & Actual Raw Results
+```powershell
+# Vitest Full Component & Unit Suite
+cd frontend && npm test
+```
+```
+ Test Files  15 passed (15)
+      Tests  46 passed (46)
+   Start at  15:03:16
+   Duration  12.74s (transform 2.04s, setup 10.29s, collect 14.09s, tests 4.30s, environment 57.12s, prepare 7.58s)
+```
+```powershell
+# ESLint Verification
+cd frontend && npm run lint
+```
+```
+✔ No ESLint warnings or errors
+```
+```powershell
+# Next.js Production Build
+cd frontend && npm run build
+```
+```
+Route (app)                              Size     First Load JS
+┌ ○ /                                    175 B          96.2 kB
+├ ○ /_not-found                          873 B          88.2 kB
+├ ○ /checker                             4.63 kB         119 kB
+├ ○ /dashboard                           6.06 kB         113 kB
+├ ○ /history                             4.86 kB         112 kB
+├ ○ /humanizer                           14.1 kB         121 kB
+├ ƒ /reports/[id]                        1.47 kB         116 kB
+└ ○ /settings                            6.27 kB         114 kB
++ First Load JS shared by all            87.3 kB
+✓ Generating static pages (9/9)
+```
+
+### Modified / Created Files
+- `frontend/src/lib/local-store.ts` *(new)*: Privacy-compliant client session store with opt-in controls and TTL pruning.
+- `frontend/src/app/dashboard/page.tsx`: Full Dashboard implementation with real health probe, live counts, and empty states.
+- `frontend/src/app/history/page.tsx`: Full History page with search, filter tabs, retention notice, and deletion modal.
+- `frontend/src/app/reports/[id]/page.tsx`: Report Detail page reusing `CheckerResults` with honest unpopulated state.
+- `frontend/src/app/settings/page.tsx`: Settings page with opt-in toggle, default mode selector, data export, and purge dialog.
+- `frontend/src/app/checker/page.tsx`: Connected check completion to opt-in localStore.
+- `frontend/src/app/humanizer/page.tsx`: Connected revision completion to opt-in localStore.
+- `frontend/src/components/layout/AppShell.tsx`: Added null safety to `pathname` checks for SSR and headless unit testing.
+- `frontend/src/test/DashboardAndSettings.test.tsx` *(new — 11 tests)*: Unit and component test suite.
+- `CHANGELOG.md`: Logged all additions and testing results.
+- `PROJECT_STATUS.md`: Updated active phase, task summaries, and verification commands.
 
 ---
 

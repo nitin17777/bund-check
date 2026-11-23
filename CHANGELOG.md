@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-23 (Frontend Workspace Suite: Dashboard, History, Report Details, Settings & Local Opt-in Store)
+
+#### Dashboard Workspace (`frontend/src/app/dashboard/page.tsx`)
+- Integrated real-time backend health probe via `GET /api/v1/health` showing live status, version, and environment.
+- Added live metric cards: engine status, calibrated abstain band (`[0.40 - 0.60]`), stored analyses count, and stored revisions count.
+- Added quick action workflow shortcuts to Content Checker and Writing Improver.
+- Implemented recent activity stream with direct report links when opted in, and proper zero-storage empty state for new users.
+
+#### Audit History Workspace (`frontend/src/app/history/page.tsx`)
+- Searchable and filterable history viewer supporting `All Records`, `Content Checks`, and `Writing Revisions`.
+- Retention policy notice clarifying local-only storage posture.
+- Individual record deletion with accessible confirmation modal (`Dialog`).
+- Proper empty states for both unpopulated history and zero-match query results.
+
+#### Report Detail Workspace (`frontend/src/app/reports/[id]/page.tsx`)
+- Reuses `CheckerResults` and `SentenceHeatmap` to display full saved analysis audits, empirical uncertainty intervals, scientific limitations, model hash, and document statistics.
+- Honest unpopulated empty state for non-persisted identifiers without fabricated scores or fake downloads.
+
+#### System Settings Workspace (`frontend/src/app/settings/page.tsx`)
+- "Store my documents" opt-in preference toggle (default OFF / strict zero-storage).
+- Local retention window configuration (7, 30, 90 days).
+- Default Writing Improver mode selector across all 6 editorial presets.
+- Data portability: JSON export of all configured settings and saved audit records.
+- Complete data purge with irreversible deletion confirmation dialog.
+- Explicit "Phase 8 Roadmap" disclosure on cloud sync & remote account endpoints (`GET /api/v1/settings`, `DELETE /api/v1/delete`).
+
+#### Local Opt-In Session Store (`frontend/src/lib/local-store.ts`)
+- Client-side storage layer respecting privacy directives: persists records strictly when `storeOptIn` is true, with automated TTL pruning, export, and purge handlers.
+
+#### Verification & Testing
+- `frontend/src/test/DashboardAndSettings.test.tsx`: 11 Vitest unit and component tests covering local store operations, dashboard metrics, history search/filtering/deletion, settings persistence, and report detail rendering.
+- All 46 frontend unit tests passing across 15 test suites; ESLint clean (0 warnings, 0 errors); production build passing (9/9 routes compiled and statically optimized).
+
+
 ### Added - 2026-11-22 (Writing Improver Workspace: Interactive Sentence Diffs, Verification Audit, and Undo/Redo Engine)
 
 #### Writing Improver Workspace (`frontend/src/`)

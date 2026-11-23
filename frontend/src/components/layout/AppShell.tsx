@@ -105,7 +105,7 @@ export function AppShell({ children }: AppShellProps) {
               Application
             </div>
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive = pathname ? (pathname === item.href || pathname.startsWith(`${item.href}/`)) : false;
               const Icon = item.icon;
               return (
                 <Link
@@ -234,7 +234,7 @@ export function AppShell({ children }: AppShellProps) {
               <span>BUNDCHECK</span>
               <span>/</span>
               <span className="text-text-secondary uppercase">
-                {pathname.replace("/", "") || "home"}
+                {pathname ? (pathname.replace("/", "") || "home") : "home"}
               </span>
             </div>
           </div>

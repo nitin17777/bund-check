@@ -27,6 +27,7 @@ import {
   ParagraphImprovement,
   VerificationReport,
 } from "@/lib/api-client";
+import { localStore } from "@/lib/local-store";
 
 function computeFinalTextFromParagraphs(paragraphs: ParagraphImprovement[]): string {
   return paragraphs
@@ -133,6 +134,7 @@ export default function HumanizerPage() {
       setStepMessage("Aligning sentences and compiling verification audit...");
 
       setResponse(resp);
+      localStore.saveImproverRecord(resp, sourceText);
       const initialParagraphs = resp.paragraphs || [];
       setParagraphs(initialParagraphs);
 
