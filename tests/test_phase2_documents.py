@@ -13,9 +13,7 @@ import glob
 import tempfile
 import pytest
 import pymupdf as fitz
-from fastapi.testclient import TestClient
 
-from backend.app.main import app
 from backend.app.core.config import settings
 from backend.app.core.errors import DocumentProcessingException
 from backend.app.services.documents.validators import (
@@ -37,7 +35,6 @@ from backend.app.services.documents.segmentation import (
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
-client = TestClient(app)
 
 
 # ==============================================================================
@@ -171,13 +168,13 @@ def test_fixture_zip_bomb_docx_rejection():
 
 
 # ==============================================================================
-# 2. HTTP Endpoint Tests (FastAPI TestClient)
+# 2. HTTP Endpoint Tests (httpx ASGITransport via conftest api_client fixture)
 # ==============================================================================
 
-def test_api_extract_endpoint_multipart_txt():
+def test_api_extract_endpoint_multipart_txt(api_client):
     path = os.path.join(FIXTURES_DIR, "sample_document.txt")
     with open(path, "rb") as f:
-        response = client.post(
+        response = api_client.post(
             "/api/v1/documents/extract",
             files={"file": ("sample_document.txt", f, "text/plain")},
         )
@@ -186,7 +183,7 @@ def test_api_extract_endpoint_multipart_txt():
     assert data["mime_type"] == "text/plain"
     assert data["stats"]["paragraph_count"] >= 3
     assert len(data["paragraphs"]) >= 3
-    
+
     # Assert offsets round-trip in API response
     full = data["normalized_full_text"]
     for p in data["paragraphs"]:
@@ -195,10 +192,10 @@ def test_api_extract_endpoint_multipart_txt():
             assert p["normalized_text"][s["start_char"] : s["end_char"]] == s["text"]
 
 
-def test_api_extract_endpoint_multipart_docx():
+def test_api_extract_endpoint_multipart_docx(api_client):
     path = os.path.join(FIXTURES_DIR, "sample_report.docx")
     with open(path, "rb") as f:
-        response = client.post(
+        response = api_client.post(
             "/api/v1/documents/extract",
             files={"file": ("sample_report.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
         )
@@ -207,24 +204,21 @@ def test_api_extract_endpoint_multipart_docx():
     assert data["stats"]["paragraph_count"] >= 4
 
 
-def test_api_extract_endpoint_json_text():
+def test_api_extract_endpoint_json_text(api_client):
     payload = {
         "text": "This is raw pasted text.\n\nSecond paragraph with Dr. Smith et al. [14].",
         "filename": "pasted.txt",
     }
-    response = client.post(
-        "/api/v1/documents/extract",
-        json=payload,
-    )
+    response = api_client.post("/api/v1/documents/extract", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["stats"]["paragraph_count"] == 2
     assert "Dr. Smith et al. [14]" in data["paragraphs"][1]["normalized_text"]
 
 
-def test_api_extract_endpoint_error_handling_rfc7807():
+def test_api_extract_endpoint_error_handling_rfc7807(api_client):
     # Empty file
-    response = client.post(
+    response = api_client.post(
         "/api/v1/documents/extract",
         files={"file": ("empty.txt", b"", "text/plain")},
     )
@@ -235,7 +229,7 @@ def test_api_extract_endpoint_error_handling_rfc7807():
 
     # Oversized file
     oversized = b"X" * (10 * 1024 * 1024 + 100)
-    response = client.post(
+    response = api_client.post(
         "/api/v1/documents/extract",
         files={"file": ("oversized.txt", oversized, "text/plain")},
     )
@@ -244,22 +238,19 @@ def test_api_extract_endpoint_error_handling_rfc7807():
     assert err["code"] == "PAYLOAD_TOO_LARGE"
 
 
-def test_no_temporary_files_left_behind():
-    # List temp dir files before and after
+def test_no_temporary_files_left_behind(api_client):
     temp_dir = tempfile.gettempdir()
     initial_files = set(os.listdir(temp_dir))
 
-    # Run upload
     path = os.path.join(FIXTURES_DIR, "sample_document.txt")
     with open(path, "rb") as f:
-        response = client.post(
+        response = api_client.post(
             "/api/v1/documents/extract",
             files={"file": ("sample_document.txt", f, "text/plain")},
         )
     assert response.status_code == 200
 
     after_files = set(os.listdir(temp_dir))
-    # No new temp file should remain
     new_files = after_files - initial_files
     assert len(new_files) == 0
 
