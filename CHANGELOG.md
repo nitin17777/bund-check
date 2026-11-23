@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-11-24 (Phase 9: Hardening, Security, Benchmarking, CI/CD & Accessibility)
+
+#### Test Suite Audit & CI
+- Created `.github/workflows/ci.yml` defining full CI workflow (Python lint, pytest suite, frontend lint, Vitest, and production build).
+- Added `tests/test_edge_cases.py` covering empty/whitespace text, oversized payloads, Pydantic improver mode validations, and async task manager lifecycle.
+- Added `frontend/src/test/EdgeCases.test.tsx` verifying edge cases in diffing, large word shifts, and reject actions.
+- Created `tests/conftest.py` with shared test application configuration.
+
+#### Production Detector Evaluation
+- Evaluated full production inference pipeline in `ml/reports/phase9_production_eval.md` on held-out test data.
+- Added comprehensive 6-subsection limitations block detailing domain shifts, short-sample variances, and non-probative legal standing.
+
+#### Security & Ingestion Hardening
+- Implemented pure ASGI `SecurityHeadersMiddleware` in `backend/app/core/security.py` injecting HSTS, restrictive CSP, nosniff, DENY frame options, Permissions-Policy, and cache-control no-store headers.
+- Performed upload fuzzing against decompression bombs, zip corruptions, null bytes, and spoofed extensions.
+- Verified structlog sanitizers prevent sensitive manuscript content and API keys from leaking into log records.
+
+#### Performance & Benchmarking
+- Added `docs/BENCHMARK.md` documenting empirical latency and memory across 500 words (33 ms, 0.1 MB RAM), 5,000 words (695 ms, 0.8 MB RAM), and 20,000 words (10.9 s, 3.1 MB RAM).
+- Validated feature caching and memory ceiling compliance (< 4 MB working RAM) adhering to RTX 2050 4GB VRAM limits.
+
+#### Accessibility & UI Hygiene
+- Audited all frontend routes and added missing `aria-label` attribute on the history search input.
+- Verified dynamic data binding in `CheckerResults` confirming no fabricated numbers or hardcoded scores.
+
 ### Added - 2026-11-23 (Backend Phase 8: SQLAlchemy 2 + Alembic, Auth, Endpoints, Export)
 
 #### SQLAlchemy 2 + Alembic Migrations
