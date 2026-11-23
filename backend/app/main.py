@@ -120,24 +120,6 @@ async def document_processing_exception_handler(request: Request, exc: DocumentP
 
 
 # ---------------------------------------------------------------------------
-# Request-ID middleware (injected via lifespan event / middleware)
-# ---------------------------------------------------------------------------
-
-@app.middleware("http")
-async def request_id_middleware(request: Request, call_next):
-    """
-    Assign a unique X-Request-ID to every request.
-    Echoed back in the response header for client-side tracing.
-    Does NOT log request content.
-    """
-    request_id = request.headers.get("x-request-id") or f"req_{uuid.uuid4().hex[:12]}"
-    request.state.request_id = request_id
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    return response
-
-
-# ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 app.include_router(documents.router, prefix=settings.API_V1_STR)

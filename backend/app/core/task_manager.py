@@ -81,7 +81,19 @@ class InMemoryTaskManager:
 
     def __init__(self) -> None:
         self._tasks: Dict[str, TaskRecord] = {}
-        self._lock = asyncio.Lock()
+        self._lock_obj: Optional[asyncio.Lock] = None
+        self._lock_loop: Optional[asyncio.AbstractEventLoop] = None
+
+    @property
+    def _lock(self) -> asyncio.Lock:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if self._lock_obj is None or self._lock_loop is not loop:
+            self._lock_obj = asyncio.Lock()
+            self._lock_loop = loop
+        return self._lock_obj
 
     def _generate_task_id(self) -> str:
         return f"task_{uuid.uuid4().hex[:12]}"

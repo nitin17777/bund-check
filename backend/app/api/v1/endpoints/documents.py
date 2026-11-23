@@ -41,7 +41,6 @@ limiter = get_limiter()
 @limiter.limit("20/minute")
 async def extract_document(
     request: Request,
-    file: Optional[UploadFile] = File(None),
 ) -> Document:
     """
     Extracts structured paragraphs and sentences from uploaded document (PDF, DOCX, TXT)
@@ -49,28 +48,39 @@ async def extract_document(
     Files are processed in memory and strictly deleted/discarded immediately.
     """
     temp_file_path: Optional[str] = None
+    content_type = request.headers.get("content-type", "")
     try:
         # Case 1: File uploaded via multipart form
-        if file is not None:
-            file_bytes = await file.read()
-            filename = file.filename or "upload.bin"
-            
-            # Write to a tracked temp file to verify temporary file handling & cleanup
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                tmp.write(file_bytes)
-                temp_file_path = tmp.name
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            file_obj = form.get("file")
+            if file_obj is not None:
+                if hasattr(file_obj, "read"):
+                    file_bytes = await file_obj.read()
+                    filename = getattr(file_obj, "filename", None) or "upload.bin"
+                elif isinstance(file_obj, (bytes, bytearray)):
+                    file_bytes = bytes(file_obj)
+                    filename = "upload.bin"
+                else:
+                    file_bytes = str(file_obj).encode("utf-8")
+                    filename = "upload.txt"
 
-            # Validate file signature, extension, decompression bombs, macros, etc.
-            mime_type = validate_document_upload(file_bytes, filename=filename)
+                # Write to a tracked temp file to verify temporary file handling & cleanup
+                with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    temp_file_path = tmp.name
 
-            if mime_type == MIME_PDF:
-                result = extract_text_from_pdf(file_bytes, filename=filename)
-            elif mime_type == MIME_DOCX:
-                result = extract_text_from_docx(file_bytes, filename=filename)
-            else:
-                result = extract_text_from_txt(file_bytes, filename=filename)
+                # Validate file signature, extension, decompression bombs, macros, etc.
+                mime_type = validate_document_upload(file_bytes, filename=filename)
 
-            return result
+                if mime_type == MIME_PDF:
+                    result = extract_text_from_pdf(file_bytes, filename=filename)
+                elif mime_type == MIME_DOCX:
+                    result = extract_text_from_docx(file_bytes, filename=filename)
+                else:
+                    result = extract_text_from_txt(file_bytes, filename=filename)
+
+                return result
 
         # Case 2: JSON payload with raw text
         content_type = request.headers.get("content-type", "")

@@ -81,39 +81,68 @@ _CSP_DOCS = (
 )
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+import uuid
+from starlette.types import ASGIApp, Scope, Receive, Send
+
+
+class SecurityHeadersMiddleware:
     """
-    Adds security-related HTTP response headers to every API response.
-    Docs routes (/docs, /redoc, /openapi.json) get a relaxed CSP to allow Swagger UI.
-    API endpoints get the strictest policy + Cache-Control: no-store.
+    Pure ASGI middleware that adds security response headers and X-Request-ID.
+    Avoids Starlette BaseHTTPMiddleware request-body stream deadlocks on file uploads.
     """
 
     def __init__(self, app: ASGIApp) -> None:
-        super().__init__(app)
+        self.app = app
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        response = await call_next(request)
-        path = request.url.path
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        # HSTS — only meaningful behind HTTPS but harmless otherwise
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=63072000; includeSubDomains; preload"
-        )
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = (
-            "microphone=(), camera=(), geolocation=(), payment=()"
-        )
+        # Extract or generate X-Request-ID
+        req_headers = dict(scope.get("headers", []))
+        req_id = req_headers.get(b"x-request-id")
+        if not req_id:
+            req_id = f"req_{uuid.uuid4().hex[:12]}".encode("ascii")
 
-        # Content-Security-Policy: relax for Swagger UI paths
-        if path in ("/docs", "/redoc") or path.startswith("/openapi"):
-            response.headers["Content-Security-Policy"] = _CSP_DOCS
-        else:
-            response.headers["Content-Security-Policy"] = _CSP_DEFAULT
+        path = scope.get("path", "")
 
-        # Prevent browsers caching document text from API endpoints
-        if path.startswith("/api/"):
-            response.headers["Cache-Control"] = _API_CACHE_CONTROL
+        async def send_wrapper(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                # Filter out any duplicate security headers
+                existing_headers = message.get("headers", [])
+                out_headers = [
+                    (k, v) for k, v in existing_headers
+                    if k.lower() not in (
+                        b"x-request-id",
+                        b"strict-transport-security",
+                        b"x-content-type-options",
+                        b"x-frame-options",
+                        b"referrer-policy",
+                        b"permissions-policy",
+                        b"content-security-policy",
+                        b"cache-control",
+                    )
+                ]
+                # Inject security headers and Request ID
+                out_headers.append((b"x-request-id", req_id))
+                out_headers.append((b"strict-transport-security", b"max-age=63072000; includeSubDomains; preload"))
+                out_headers.append((b"x-content-type-options", b"nosniff"))
+                out_headers.append((b"x-frame-options", b"DENY"))
+                out_headers.append((b"referrer-policy", b"strict-origin-when-cross-origin"))
+                out_headers.append((b"permissions-policy", b"microphone=(), camera=(), geolocation=(), payment=()"))
 
-        return response
+                # CSP
+                if path in ("/docs", "/redoc") or path.startswith("/openapi"):
+                    out_headers.append((b"content-security-policy", _CSP_DOCS.encode("ascii")))
+                else:
+                    out_headers.append((b"content-security-policy", _CSP_DEFAULT.encode("ascii")))
+
+                # Cache control
+                if path.startswith("/api/"):
+                    out_headers.append((b"cache-control", _API_CACHE_CONTROL.encode("ascii")))
+
+                message["headers"] = out_headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
